@@ -1,0 +1,740 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="问问伴读"><meta name="theme-color" content="#E6F2FF"></head><body>
+<title>问问伴读</title>
+<style>
+/* 照着星星积分卡：浅蓝底、白色块（底部一道浅蓝"立体"阴影）、顶部一张金色卡片。
+   这页是给家长读的：全部用系统正文字体（iPad 上是苹方），不用卡通字体；正文 17px、行距宽松。
+   颜色：深蓝字、灰字、金黄（卡片和选中）、绿色（会了/读完）、红色（卡壳）。 */
+:root{
+  color-scheme:light;
+  --sky:#E6F2FF; --ink:#1F2B57; --soft:#5F6B8A; --white:#FFFFFF; --line:#D5E3F5;
+  --sun:#FFC83D; --sun-deep:#E8890C; --sun-pale:#FFF4D2; --brown:#4A2600;
+  --mint:#1DB37A; --mint-pale:#DDF7EB;
+  --coral:#FF5F57; --coral-pale:#FFE3E1;
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+}
+[hidden]{display:none!important}
+html,body{background:var(--sky);color:var(--ink)}
+body{font-family:var(--font);font-weight:400;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 12% 8%,#fff 0 60px,transparent 61px),radial-gradient(circle at 90% 3%,#fff 0 40px,transparent 41px);background-repeat:no-repeat}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--sun-deep);outline-offset:2px}
+p{margin:0}
+b,strong{font-weight:600}
+
+.wrap{max-width:1180px;margin:0 auto;padding-block:16px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+
+/* 顶栏 */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.02em}
+.tabs{display:flex;background:var(--white);border-radius:999px;padding:4px;box-shadow:0 3px 0 var(--line)}
+.tabs button{border:0;background:none;border-radius:999px;padding:7px 18px;font-size:16px;font-weight:600;color:var(--soft)}
+.tabs button[aria-pressed="true"]{background:var(--sun);color:var(--ink)}
+
+/* 两栏 */
+.cards{display:flex;flex-direction:column;gap:18px}
+.side{display:flex;flex-direction:column;gap:12px}
+.newbtn{border:0;border-radius:18px;background:var(--sun);color:var(--brown);font-size:17px;font-weight:700;padding:13px;box-shadow:0 4px 0 var(--sun-deep)}
+.newbtn:active{transform:translateY(3px);box-shadow:none}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{border:0;text-align:left;background:var(--white);border-radius:18px;padding:11px 14px;display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;box-shadow:0 4px 0 var(--line)}
+.item[aria-current="true"]{background:var(--sun-pale);box-shadow:0 4px 0 var(--sun)}
+.item .d{font-size:13px;color:var(--soft);line-height:1.35}
+.item .t{min-width:0;font-weight:600;font-size:16px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t small{display:block;font-weight:400;font-size:13px;color:var(--soft)}
+.item .s{font-size:13px;color:var(--soft);white-space:nowrap}
+.item .s.ok{color:var(--mint);font-weight:600}
+.more{border:0;background:none;color:var(--soft);font-size:14px;padding:6px}
+.main{min-width:0;display:flex;flex-direction:column;gap:14px}
+
+/* 白块（和积分卡的格子同一种立体感） */
+.block{background:var(--white);border-radius:22px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 5px 0 var(--line)}
+.block h2{margin:0;font-size:19px;font-weight:700}
+.muted{color:var(--soft);font-size:15px}
+.btn{border:0;border-radius:999px;padding:10px 22px;font-size:16px;font-weight:700;background:var(--sun);color:var(--brown);box-shadow:0 4px 0 var(--sun-deep)}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn:disabled{opacity:.4;transform:none}
+.btn.light{background:var(--sky);color:var(--ink);box-shadow:0 4px 0 var(--line)}
+.link{border:0;background:none;padding:4px 0;color:var(--soft);font-size:14px;text-decoration:underline}
+.link.red{color:var(--coral)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note{background:var(--sun-pale);border-radius:16px;padding:10px 14px;font-size:15px}
+.err{background:var(--coral-pale);border-radius:16px;padding:10px 14px;font-size:15px}
+
+/* 表单 */
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-weight:600;font-size:15px}
+.field input[type=date],.field input[type=text],.field textarea,.field select{border:2px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;min-width:0;font-size:16px}
+.field textarea{min-height:64px;resize:vertical}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:0;background:var(--sky);border-radius:999px;padding:6px 16px;font-size:15px;font-weight:600;color:var(--soft)}
+.seg button[aria-pressed="true"]{background:var(--sun);color:var(--ink)}
+.drop{position:relative;border:2px dashed #A9C1E0;border-radius:18px;background:var(--sky);padding:22px;text-align:center;font-size:17px;font-weight:600}
+.drop small{display:block;font-weight:400;font-size:14px;color:var(--soft)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.thumb{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:var(--sky)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .no{position:absolute;left:6px;top:6px;background:var(--ink);color:#fff;border-radius:999px;font-size:12px;padding:0 7px}
+.thumb .x{position:absolute;right:6px;top:6px;border:0;width:28px;height:28px;border-radius:50%;background:var(--white);color:var(--ink);font-weight:700}
+
+/* 生成中 */
+.gen{align-items:center;text-align:center;padding:36px 20px}
+.spin{width:44px;height:44px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--sun-deep);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 卡片头：积分卡同款金色卡 */
+.title{position:relative;overflow:hidden;border-radius:22px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;color:var(--brown);
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.10) 0 2px,transparent 2px 9px),radial-gradient(120% 90% at 100% 0%,#FFF1A8 0%,transparent 45%),linear-gradient(135deg,#FFD95A 0%,#F7B52C 50%,#E8851A 100%);
+  box-shadow:0 12px 26px rgba(232,133,26,.3),inset 0 0 0 2px rgba(255,255,255,.35)}
+.title::before{content:"★";position:absolute;right:-10px;bottom:-60px;font-size:200px;line-height:1;color:#fff;opacity:.16;transform:rotate(14deg);pointer-events:none}
+.title>*{position:relative}
+.title .meta{display:flex;flex-wrap:wrap;gap:6px}
+.title .meta span{background:var(--brown);color:#FFE9A8;border-radius:999px;padding:1px 12px;font-size:13px;font-weight:600}
+.title h1{margin:0;font-size:30px;font-weight:700;line-height:1.3;text-wrap:balance}
+.title p{max-width:60ch;font-size:16px}
+.photos{display:flex;gap:6px;overflow-x:auto;padding-top:4px}
+.photos button{flex:none;border:2px solid rgba(255,255,255,.7);border-radius:8px;padding:0;width:46px;height:60px;overflow:hidden;background:rgba(255,255,255,.4)}
+.photos img{width:100%;height:100%;object-fit:cover;display:block}
+ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+
+/* 步骤 */
+.step{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start}
+.num{width:34px;height:34px;border-radius:50%;background:var(--sun);display:grid;place-items:center;font-weight:700;font-size:17px}
+.step .body{min-width:0;display:flex;flex-direction:column;gap:10px}
+.step h2{line-height:34px}
+.say-line{font-size:19px;font-weight:600}
+.list-rows{display:flex;flex-direction:column}
+.list-rows>*{padding:14px 0;border-top:1px solid var(--line)}
+.list-rows>*:first-child{border-top:0;padding-top:0}
+.list-rows>*:last-child{padding-bottom:0}
+
+/* 字词一行 */
+.wd{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:start}
+.zi{display:flex;flex-direction:column;align-items:center;min-width:72px;background:var(--sky);border-radius:14px;padding:6px 10px}
+.zi .py{font-size:14px;color:var(--soft)}
+.zi b{font-weight:600;font-size:32px;line-height:1.2;letter-spacing:.04em}
+.wd .txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wd .txt .k{color:var(--soft);font-size:14px;margin-right:8px}
+.tag{font-size:12px;color:var(--sun-deep);background:var(--sun-pale);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:2px;font-weight:600}
+.acts{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+.mk{border:0;background:var(--sky);border-radius:999px;padding:5px 14px;font-size:14px;font-weight:600;color:var(--soft)}
+.mk[aria-pressed="true"].ok{background:var(--mint);color:#fff}
+.mk[aria-pressed="true"].no{background:var(--coral);color:#fff}
+.mk[aria-pressed="true"].mid{background:var(--sun);color:var(--ink)}
+
+/* 复述、题目 */
+.rt{display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.rt .lb{color:var(--soft);font-size:14px;min-width:4em;padding-top:3px}
+.rt .pr{font-size:17px}
+details.ans{display:inline-block;margin-right:16px}
+details.ans summary{list-style:none;cursor:pointer;color:#2F6FC0;font-size:14px}
+details.ans summary::-webkit-details-marker{display:none}
+details.ans[open]{display:block}
+details.ans .a{margin-top:2px;font-size:16px;color:var(--ink);background:var(--sky);border-radius:10px;padding:6px 10px}
+.qq{display:flex;flex-direction:column;gap:6px}
+.qq .qt{font-size:18px;font-weight:600}
+.qq .k{font-size:13px;color:var(--soft)}
+
+/* 读完 */
+.donebtn{border:0;border-radius:18px;padding:14px;font-size:18px;font-weight:700;background:var(--mint);color:#fff;box-shadow:0 5px 0 #138A5C}
+.donebtn:active{transform:translateY(4px);box-shadow:none}
+.donebtn.on{background:var(--mint-pale);color:var(--mint);box-shadow:0 5px 0 var(--mint)}
+
+/* 收藏：神兽、人物 */
+.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.coll{background:var(--sky);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.coll .nm{font-size:19px;font-weight:700}
+.coll .nm small{font-size:13px;font-weight:400;color:var(--soft);margin-left:6px}
+.coll dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:15px}
+.coll dt{color:var(--soft)}
+.coll dd{margin:0}
+.coll .pic{border-radius:10px;overflow:hidden;background:var(--white);aspect-ratio:4/3;display:grid;place-items:center;color:var(--soft);font-size:14px;margin-top:4px}
+.coll .pic img{width:100%;height:100%;object-fit:cover}
+
+/* 积累本 */
+.nums{display:flex;flex-wrap:wrap;gap:8px 28px;background:var(--white);border-radius:22px;padding:16px 20px;box-shadow:0 5px 0 var(--line)}
+.nums div{display:flex;align-items:baseline;gap:6px}
+.nums b{font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.nums span{color:var(--soft);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.wc{border:0;background:var(--sky);border-radius:12px;padding:5px 12px;display:flex;flex-direction:column;align-items:center;line-height:1.3}
+.wc .py{font-size:12px;color:var(--soft)}
+.wc b{font-size:22px;font-weight:600}
+.wc small{font-size:11px;color:var(--soft)}
+.wc.no{background:var(--coral-pale)}
+.empty{color:var(--soft);font-size:15px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:15px;z-index:40;max-width:calc(100vw - 32px)}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(31,43,87,.9);display:grid;place-items:center;padding:20px max(20px,env(safe-area-inset-right,0px)) 20px max(20px,env(safe-area-inset-left,0px))}
+.lightbox img{max-width:100%;max-height:calc(100vh - 40px);border-radius:10px}
+.status{text-align:center;font-size:13px;color:var(--soft)}
+
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:520px){.step{grid-template-columns:1fr}.step h2{line-height:1.4}.acts{grid-column:1/-1}.title h1{font-size:26px}}
+@media (min-width:820px){
+  .cards{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start}
+  .side{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding:2px 2px 8px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>问问伴读</h1>
+    <nav class="tabs" aria-label="页面">
+      <button data-tab="cards" aria-pressed="true">伴读卡</button>
+      <button data-tab="bank" aria-pressed="false">积累本</button>
+      <button data-tab="set" aria-pressed="false">设置</button>
+    </nav>
+  </header>
+
+  <section id="v-cards" class="cards">
+    <aside class="side">
+      <button class="newbtn" id="newBtn">＋ 准备新的一篇</button>
+      <div class="list" id="list"></div>
+    </aside>
+    <div class="main" id="main"><div class="block"><p class="muted">正在打开记录本…</p></div></div>
+  </section>
+
+  <section id="v-bank" class="main" hidden></section>
+  <section id="v-set" class="main" hidden></section>
+  <div class="status" id="status"></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="lightbox" id="lb" hidden><img id="lbImg" alt="书页照片"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const fmt=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today=()=>fmt(new Date());
+const WD="日一二三四五六";
+function parseD(ds){const[y,m,d]=ds.split("-").map(Number);return new Date(y,m-1,d)}
+function addDays(ds,n){const d=parseD(ds);d.setDate(d.getDate()+n);return fmt(d)}
+function dayLabel(ds){if(!ds)return"";if(ds===today())return"今天";if(ds===addDays(today(),-1))return"昨天";const d=parseD(ds);return(d.getMonth()+1)+"月"+d.getDate()+"日"}
+const weekday=ds=>"周"+WD[parseD(ds).getDay()];
+const arr=x=>Array.isArray(x)?x:[];
+const PH={},BLANK="data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+const blobUrl=id=>PH[id]||BLANK;
+const phWait={};
+function loadPhoto(id){if(PH[id])return Promise.resolve(PH[id]);return phWait[id]||(phWait[id]=gh.photo(id).then(u=>{PH[id]=u;return u}).finally(()=>{delete phWait[id]}))}
+function hydrate(){document.querySelectorAll("img[data-ph]:not([data-ok])").forEach(img=>{img.dataset.ok="1";loadPhoto(img.dataset.ph).then(u=>{img.src=u}).catch(()=>{img.style.visibility="hidden"})})}
+const blobToDataURL=b=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(b)});
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
+
+/* ---------------- 朗读 ---------------- */
+function pickVoice(){try{const vs=speechSynthesis.getVoices().filter(v=>/^(zh|cmn)/i.test(v.lang));
+  const sc=v=>(/premium|enhanced|优化|高级|高品质|增强|natural/i.test(v.name)?20:0)+(/(zh|cmn)[-_]CN/i.test(v.lang)?5:0);
+  return vs.sort((a,b)=>sc(b)-sc(a))[0]||null}catch(e){return null}}
+function say(text){try{const u=new SpeechSynthesisUtterance(text),v=pickVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang="zh-CN";u.rate=.85;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+
+/* ---------------- 状态 ---------------- */
+const S={cards:{},profile:null,sel:null,view:"new",tab:"cards",showAll:false,live:{},draft:null,loaded:false};
+const cap={db:null,assets:null,sample:null,imgMax:0,imgOK:false};
+function newDraft(){return{date:today(),book:"",mode:"精读",style:"标准",note:"",files:[]}}
+
+/* ---------------- 记录本（GitHub 私密 Gist） ----------------
+   每次改动先存在本机、记进待同步列表；同步时取下最新的 Gist，套上这些改动再写回，
+   所以 iPad 和电脑各点各的不会互相覆盖。和星星积分卡同一个办法。 */
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const ghKey=()=>ls.get("wwbd:ghkey","")||ls.get("xdj:key","");
+const GIST_DESC="问问伴读记录 wenwen-reading-data",COLS=["cards","settings"];
+const hhmm=()=>{const d=new Date();return d.getHours()+":"+pad(d.getMinutes())};
+const setStatus=t=>{$("#status").textContent=t};
+const gh={
+  async api(path,opt={}){
+    const r=await fetch("https://api.github.com"+path,{...opt,cache:"no-store",headers:{Authorization:"Bearer "+ghKey(),Accept:"application/vnd.github+json",...(opt.body?{"Content-Type":"application/json"}:{})}});
+    if(!r.ok)throw r.status;return r.status===204?null:r.json()},
+  async gistId(){
+    const saved=ls.get("wwbd:gist","");if(saved)return saved;
+    for(let page=1;page<=10;page++){const l=await this.api("/gists?per_page=100&page="+page);
+      const g=l.find(g=>g.description===GIST_DESC);if(g){ls.set("wwbd:gist",g.id);return g.id}if(l.length<100)break}
+    throw "nogist"},
+  async file(f){return f?(f.truncated?await (await fetch(f.raw_url,{cache:"no-store"})).text():f.content):""},
+  async photo(id){const g=await this.api("/gists/"+id);return this.file(g.files["photo.txt"])},
+  async upload(blob){const u=await blobToDataURL(blob);
+    const g=await this.api("/gists",{method:"POST",body:JSON.stringify({description:"问问伴读照片",public:false,files:{"photo.txt":{content:u}}})});
+    PH[g.id]=u;return{id:g.id}},
+  async del(id){await this.api("/gists/"+id,{method:"DELETE"})}
+};
+const DB={
+  data:{cards:ls.get("wwbd:c:cards",{}),settings:ls.get("wwbd:c:settings",{})},subs:[],busy:false,again:false,
+  emit(){for(const f of this.subs)f()},
+  put(col,id,val){
+    if(val===null)delete this.data[col][id];else this.data[col][id]=val;
+    ls.set("wwbd:c:"+col,this.data[col]);
+    const p=ls.get("wwbd:pend",[]);p.push([col,id,val]);ls.set("wwbd:pend",p);
+    this.emit();this.sync()},
+  async sync(){
+    if(!ghKey()){setStatus("还没设置同步钥匙，记录先存在这台设备上（在「设置」里粘贴）");return}
+    if(this.busy){this.again=true;return}
+    this.busy=true;
+    try{
+      const id=await gh.gistId(),g=await gh.api("/gists/"+id+"?t="+Date.now());
+      const pend=ls.get("wwbd:pend",[]),files={},remote={};
+      for(const c of COLS){
+        let m={};try{m=JSON.parse((await gh.file(g.files[c+".json"]))||"{}")}catch(e){}
+        const mine=pend.filter(x=>x[0]===c);
+        for(const[,i,d]of mine){if(d===null)delete m[i];else m[i]=d}
+        if(mine.length)files[c+".json"]={content:JSON.stringify(m)};
+        remote[c]=m;
+      }
+      if(Object.keys(files).length)await gh.api("/gists/"+id,{method:"PATCH",body:JSON.stringify({files})});
+      const rest=ls.get("wwbd:pend",[]).slice(pend.length);ls.set("wwbd:pend",rest);
+      for(const[c,i,d]of rest){if(d===null)delete remote[c][i];else remote[c][i]=d}
+      const changed=COLS.some(c=>JSON.stringify(remote[c])!==JSON.stringify(this.data[c]));
+      for(const c of COLS){this.data[c]=remote[c];ls.set("wwbd:c:"+c,remote[c])}
+      if(changed)this.emit();
+      setStatus("✅ 已和电脑、iPad 同步 "+hhmm());
+    }catch(e){
+      if(e===401||e===403)setStatus("同步钥匙不对或过期了，请在「设置」里重新粘贴");
+      else if(e===404){ls.set("wwbd:gist",null);setStatus("找不到记录本，请稍后刷新再试")}
+      else if(e==="nogist")setStatus("这把钥匙找不到伴读的记录本，请确认粘贴的是对的钥匙");
+      else setStatus("暂时没连上网，记录先存在这台设备上，连上网会自动同步");
+    }finally{this.busy=false;if(this.again){this.again=false;this.sync()}}
+  },
+  start(){
+    this.sync();
+    setInterval(()=>{if(!document.hidden)this.sync()},30000);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)this.sync()});
+    addEventListener("online",()=>this.sync());
+  }
+};
+function setCard(id,data){DB.put("cards",id,data);return Promise.resolve()}
+function deepMerge(a,b){const o={...a};for(const k in b){o[k]=(b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k])&&a&&typeof a[k]==="object"&&!Array.isArray(a[k]))?deepMerge(a[k],b[k]):b[k]}return o}
+function updCard(id,patch){DB.put("cards",id,deepMerge(DB.data.cards[id]||{},patch));return Promise.resolve()}
+function delCard(id){DB.put("cards",id,null);return Promise.resolve()}
+
+/* ---------------- 请 Claude 写卡（用家长自己的 Claude 钥匙） ---------------- */
+const MODEL="claude-opus-5-5";
+const apiKey=()=>ls.get("wwbd:apikey","");
+const claudeAI={
+  async json(prompt,{images=[],onText}={}){
+    const content=[];
+    for(const b of images)content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:(await blobToDataURL(b)).split(",")[1]}});
+    content.push({type:"text",text:prompt});
+    let r;
+    try{r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey(),"anthropic-version":"2023-06-01","anthropic-beta":"server-side-fallback-2026-07-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:MODEL,max_tokens:32000,stream:true,fallbacks:"default",output_config:{effort:"medium"},messages:[{role:"user",content}]})})}
+    catch(e){throw{code:"network"}}
+    if(!r.ok){let m="";try{m=(await r.json())?.error?.message||""}catch(e){}
+      throw{code:r.status===401?"bad_key":r.status===429?"rate_limited":(r.status===529||r.status>=500)?"overloaded":/credit|balance|billing/i.test(m)?"no_credit":/too large|too long|exceed/i.test(m)?"prompt_too_large":/image/i.test(m)?"image_rejected":"api",message:m}}
+    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",text="",stop="";
+    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
+      while((i=buf.indexOf("\n"))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith("data:"))continue;
+        let ev;try{ev=JSON.parse(line.slice(5))}catch(e){continue}
+        if(ev.type==="content_block_start"&&ev.content_block?.type==="fallback")text="";
+        else if(ev.type==="content_block_delta"&&ev.delta?.type==="text_delta"){text+=ev.delta.text;onText&&onText({text})}
+        else if(ev.type==="message_delta"&&ev.delta?.stop_reason)stop=ev.delta.stop_reason;
+        else if(ev.type==="error")throw{code:ev.error?.type==="overloaded_error"?"overloaded":"api",message:ev.error?.message}}}
+    if(stop==="refusal")throw{code:"refused"};
+    if(!text.trim())throw{code:"empty_completion"};
+    const a=text.indexOf("{"),z=text.lastIndexOf("}");if(a<0||z<a)throw{code:"invalid_json"};
+    try{return JSON.parse(text.slice(a,z+1))}catch(e){throw{code:"invalid_json"}}
+  }
+};
+function refreshCap(){
+  cap.sample=apiKey()?claudeAI:null;cap.imgOK=!!cap.sample;cap.imgMax=8;
+  cap.assets=ghKey()?{upload:b=>gh.upload(b),delete:id=>gh.del(id)}:null;
+}
+function sortedCards(){return Object.entries(S.cards).map(([id,c])=>({id,...c})).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0))}
+
+/* ---------------- 列表 ---------------- */
+function statusText(c){
+  if(c.status==="done")return`<span class="s ok">✓ 读完</span>`;
+  if(c.status==="generating")return`<span class="s">生成中</span>`;
+  if(c.status==="failed"&&!c.card)return`<span class="s">没生成</span>`;
+  return`<span class="s"></span>`;
+}
+function renderList(){
+  const cs=sortedCards();const show=S.showAll?cs:cs.slice(0,14);
+  $("#list").innerHTML=show.length?show.map(c=>`<button class="item" data-id="${esc(c.id)}" aria-current="${S.view==="card"&&S.sel===c.id}">
+      <span class="d">${esc(dayLabel(c.date))}<br>${esc(c.date?weekday(c.date):"")}</span>
+      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}<small>${esc(c.book||"")} · ${esc(c.mode||"")}${c.example?" · 示例":""}</small></span>
+      ${statusText(c)}</button>`).join(""):`<div class="item"><span></span><span class="empty">还没有伴读卡</span><span></span></div>`;
+  $("#list").insertAdjacentHTML("afterend","");
+  const mb=$("#moreBtn");if(mb)mb.remove();
+  if(cs.length>14)$("#list").insertAdjacentHTML("afterend",`<button class="more" id="moreBtn">${S.showAll?"收起":"看更早的 "+(cs.length-14)+" 篇"}</button>`);
+}
+$(".side").addEventListener("click",e=>{
+  const it=e.target.closest(".item[data-id]");if(it){S.sel=it.dataset.id;S.view="card";renderList();renderMain();window.scrollTo({top:0,behavior:"smooth"});return}
+  if(e.target.id==="moreBtn"){S.showAll=!S.showAll;renderList()}
+});
+$("#newBtn").addEventListener("click",()=>{S.view="new";if(!S.draft)S.draft=newDraft();renderList();renderMain()});
+
+/* ---------------- 新建 ---------------- */
+function segHTML(name,opts,val){return`<div class="seg" data-seg="${name}">${opts.map(o=>`<button type="button" data-v="${esc(o)}" aria-pressed="${o===val}">${esc(o)}</button>`).join("")}</div>`}
+const STYLE_HELP={"标准":"","画一画日":"小任务换成画下今天的神兽或人物，题目更轻松。","小考官日":"多几道问问考爸爸妈妈的题。"};
+function renderNew(){
+  const d=S.draft||(S.draft=newDraft());
+  const canGen=!!cap.sample&&cap.imgOK;
+  $("#main").innerHTML=`<div class="block">
+    <h2>准备新的一篇</h2>
+    <div class="field"><span>书页照片</span>
+      <label class="drop">＋ 拍照或选照片<small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>
+      ${d.files.length?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}</div>`:""}
+    </div>
+    <div class="row">
+      <label class="field" style="flex:1 1 160px"><span>哪天读</span><input type="date" id="f-date" value="${esc(d.date)}"></label>
+      <label class="field" style="flex:2 1 200px"><span>文章名称（可不填）</span><input type="text" id="f-book" placeholder="比如：精卫填海" value="${esc(d.book)}"></label>
+    </div>
+    <div class="row" style="align-items:flex-start;gap:24px">
+      <div class="field"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div>
+      <div class="field"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div>
+    </div>
+    ${d.mode==="泛读"||STYLE_HELP[d.style]?`<p class="muted">${d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":""}${STYLE_HELP[d.style]}</p>`:""}
+    <label class="field"><span>想告诉 Claude 的（可不填）</span><textarea id="f-note" placeholder="比如：他对“衔”字老读错；这篇想多讲讲后羿">${esc(d.note)}</textarea></label>
+    ${!cap.sample?`<div class="note">还没设置 Claude 钥匙。到上面「设置」里粘贴一次，这台设备以后就能生成伴读卡了。</div>`:""}
+    <div class="row"><button class="btn" id="genBtn" ${canGen?"":"disabled"}>生成伴读卡</button><span class="muted" id="genMsg"></span></div>
+  </div>`;
+}
+$("#main").addEventListener("input",e=>{
+  const d=S.draft;if(!d||S.view!=="new")return;
+  if(e.target.id==="f-date")d.date=e.target.value||today();
+  if(e.target.id==="f-book")d.book=e.target.value;
+  if(e.target.id==="f-note")d.note=e.target.value;
+});
+$("#main").addEventListener("change",async e=>{
+  if(e.target.id==="f-files"){
+    const d=S.draft;const fs=[...e.target.files].filter(f=>/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+    for(const f of fs)d.files.push({file:f,url:URL.createObjectURL(f)});
+    if(cap.imgMax&&d.files.length>cap.imgMax)toast("一次最多 "+cap.imgMax+" 张，多出来的请分两篇");
+    renderNew();
+  }
+  if(e.target.id==="stuckChars"){updCard(S.sel,{marks:{stuckChars:e.target.value.trim()}})}
+  if(e.target.id==="drawFile"){uploadDrawing(e.target.files[0])}
+});
+
+/* 压缩照片：长边 1800，JPEG */
+async function shrink(file){
+  try{
+    const url=URL.createObjectURL(file);
+    const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+    const k=Math.min(1,1800/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+    return await new Promise(ok=>c.toBlob(b=>ok(b||file),"image/jpeg",.86));
+  }catch(e){return file}
+}
+
+/* ---------------- 让 Claude 写卡 ---------------- */
+function pastWords(exceptId){
+  const ws=[],stuck=[];
+  for(const c of sortedCards()){if(c.id===exceptId||!c.card||c.example)continue;
+    for(const w of arr(c.card.words)){if(!w?.word)continue;ws.push(w.word+"（"+(c.card.title||"")+"）");if(c.marks?.words?.[w.word]==="stuck")stuck.push(w.word)}
+    for(const ch of (c.marks?.stuckChars||"").replace(/[\s，,、]/g,""))stuck.push(ch);
+  }
+  return{ws:ws.slice(0,80),stuck:[...new Set(stuck)].slice(0,40)};
+}
+function buildPrompt(c,extra){
+  const p=S.profile||{};const pw=pastWords(c.id);
+  const fan=c.mode==="泛读";
+  return `你是一位很懂一年级孩子的语文伴读老师，帮家长准备今天的“伴读卡”。家长会提前看这张卡，然后陪孩子读、和孩子聊。
+
+【孩子】
+名字：${p.name||"问问"}；${p.grade||"小学一年级"}。
+喜欢的东西：${p.likes||"（家长没填）"}
+课内正在学的字：${p.inClass||"（家长没填）"}
+
+【今天】
+日期：${c.date}（${weekday(c.date)}）
+文章名称：${c.book||"（家长没写，请从照片里认出这篇的题目）"}
+方式：${c.mode}
+玩法：${c.style||"标准"}
+家长备注：${c.note||"无"}
+
+【以前学过的字词】（用来做复现提醒）
+${pw.ws.length?pw.ws.join("、"):"还没有"}
+其中还没掌握、卡壳过的：${pw.stuck.length?pw.stuck.join("、"):"无"}
+
+【照片】
+附上的照片是今天要读的书页，按顺序排列。先认真读懂照片上的文字。所有内容都以照片里的原文为准，不要编原文里没有的情节或说法。照片看不清、缺页或者不是书页时，写在 problems 里，能做多少做多少。
+
+【写作原则】
+1. 解释不用词典定义。用动作（演一演）、比较（和他熟悉的东西比）、他自己的生活经历来讲，一两句话说清，家长可以直接念给 6 岁孩子听。每个字段都写短，一句话为主。
+2. ${fan?"泛读日不选认字词。":"认字词选 2–3 个，成语最多 1 个（原文里有才选）。优先选原文里常用、一年级能认的字词；课内正在学的字在原文里出现就优先选。神兽名、人名这类生僻字只听不认，不选进认字词。"}
+3. 自然地联系他喜欢的东西（比如三国人物、恐龙、海洋生物、动画里的角色），整张卡用两三处就够，不要每条都硬凑，联系不上就留空。
+4. ${fan?"泛读日不出题，questions 返回空数组。":"题目两道：第一道“找一找”，答案在原文里能指出来；第二道“想一想”，可以推理原因、猜心情或“如果是你”，没有唯一答案。每道题配一句答不上来时家长可以给的提示。"}
+5. 复述：${fan?"泛读日 retell 的 items 返回空数组。":"神话或有情节的故事用“故事三步”（谁 → 发生了什么 → 结果怎样）；介绍神兽、怪物、地方的用“神兽档案”（叫什么、住在哪里、长什么样、有什么本领或特点）。prompt 是家长说的前半句，留空处用 ____，answer 是孩子该接的内容。"}
+6. 家长小贴士写给家长看，最多 2 条：怎么引导，碰到死亡、打仗、吃人、可怕的样子这类内容怎么温和地说，不回避也不渲染。
+7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
+8. 玩法：标准＝正常；画一画日＝小任务改成把今天的神兽或人物画下来，题目更轻松；小考官日＝在 examinerQuestions 里给 2–3 道让孩子考爸爸妈妈的题，附答案。其他玩法 examinerQuestions 返回空数组。
+9. 原文里出现神兽、怪物，就写进 beasts（每只一项）；出现三国或历史人物，就写进 people。没有就返回空数组。
+${fan?"10. 今天是泛读：重点是读得开心。words、questions 都返回空数组，给一个读完随便聊的问题 chat，加上人物卡 people。":""}
+${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
+【只回复一个 JSON 对象，字段如下】
+{
+ "title": "这篇的题目",
+ "kind": "神话故事" 或 "神兽档案" 或 "历史故事" 或 "其他",
+ "summary": "给家长的一句话：这篇讲了什么",
+ "problems": "照片有问题时写，没有就写空字符串",
+ "warmup": {"question": "读之前猜一猜的问题", "tip": "给家长的一句话"},
+ "words": [{"word": "衔", "pinyin": "xián", "isIdiom": false, "meaning": "给孩子听的解释", "play": "演一演或比一比的玩法", "link": "联系他喜欢的东西或生活的一句话，可以为空"}],
+ "retell": {"type": "故事三步" 或 "神兽档案", "items": [{"label": "谁", "prompt": "炎帝的小女儿叫____", "answer": "女娃"}]},
+ "questions": [{"type": "找一找", "q": "问题", "answer": "参考答案", "hint": "答不上时的提示"}, {"type": "想一想", "q": "", "answer": "", "hint": ""}],
+ "chat": "读完随便聊的一个问题",
+ "review": [{"word": "以前学过的字词", "note": "怎么提醒"}],
+ "tips": ["家长小贴士，最多 2 条"],
+ "task": {"name": "小任务名", "desc": "怎么做，一两句"},
+ "beasts": [{"name": "神兽名", "pinyin": "", "home": "住在哪里", "look": "长什么样", "power": "本领或特点", "compare": "和他熟悉的动物比一比"}],
+ "people": [{"name": "人物名", "nick": "外号或身份", "trait": "一个特点，一句话"}],
+ "examinerQuestions": [{"q": "", "answer": ""}]
+}`;
+}
+function clean(card){
+  card=card&&typeof card==="object"&&!Array.isArray(card)?card:{};
+  for(const k of["words","questions","review","tips","beasts","people","examinerQuestions"])card[k]=arr(card[k]).filter(x=>x!=null);
+  card.retell=card.retell&&typeof card.retell==="object"?card.retell:{type:"",items:[]};card.retell.items=arr(card.retell.items);
+  card.warmup=card.warmup&&typeof card.warmup==="object"?card.warmup:null;
+  card.task=card.task&&typeof card.task==="object"?card.task:null;
+  return card;
+}
+const ERR={bad_key:"Claude 钥匙不对或失效了，去「设置」里重新粘贴。",no_credit:"Claude 账户的余额用完了，去 console.anthropic.com 充值后再试。",overloaded:"Claude 现在太忙，过一两分钟点“再试一次”。",network:"没连上网，连上后点“再试一次”。",api:"Claude 那边出了点问题，点“再试一次”。",rate_limited:"用得太频繁了，过一会儿再试。",image_rejected:"有照片读不了，换一张清楚的再试。",refused:"Claude 没法处理这些照片，换一下照片再试。",invalid_json:"Claude 写出来的格式不对，点“再试一次”。",empty_completion:"Claude 没写出内容，点“再试一次”。",prompt_too_large:"内容太多了，少放几张照片再试。"};
+const errMsg=e=>ERR[e?.code]||"网络或服务出了点问题，点“再试一次”。";
+
+async function runSample(id,blobs,extra){
+  const c={id,...S.cards[id]};
+  S.live[id]={chars:0};if(S.sel===id)renderMain();
+  try{
+    const card=await cap.sample.json(buildPrompt(c,extra),{images:blobs,onText:({text})=>{S.live[id].chars=text.length;const el=document.getElementById("genChars");if(el)el.textContent="已经写了 "+text.length+" 个字"}});
+    delete S.live[id];
+    await updCard(id,{status:c.marks?.done?"done":"ready",card:clean(card),error:"",genAt:Date.now()});
+  }catch(e){
+    delete S.live[id];
+    if(e?.code==="cancelled"){await updCard(id,{status:c.card?"ready":"failed",error:"停下来了"});return}
+    await updCard(id,{status:c.card?"ready":"failed",error:errMsg(e)});
+    if(c.card)toast(errMsg(e));
+  }
+  if(S.sel===id)renderMain();
+}
+async function photoBlobs(c){
+  const out=[];for(const pid of arr(c.photos)){try{const u=await loadPhoto(pid);out.push(await (await fetch(u)).blob())}catch(e){}}return out;
+}
+async function generate(){
+  const d=S.draft;const msg=$("#genMsg"),btn=$("#genBtn");
+  if(!d.files.length){toast("先拍一下今天要读的书页");return}
+  const files=cap.imgMax?d.files.slice(0,cap.imgMax):d.files;
+  btn.disabled=true;msg.textContent="正在整理照片…";
+  const blobs=[];for(const f of files)blobs.push(await shrink(f.file));
+  const photos=[];
+  if(cap.assets){msg.textContent="正在保存照片…";
+    for(const b of blobs){try{const r=await cap.assets.upload(b,{type:b.type||"image/jpeg"});photos.push(r.id)}catch(e){console.warn(e)}}
+    if(photos.length<blobs.length)toast("有照片没存上，不影响生成");
+  }else{toast("还没设置同步钥匙，照片这次不保存");
+  }
+  const id=d.date+"-"+Date.now().toString(36);
+  const doc={date:d.date,book:d.book.trim(),mode:d.mode,style:d.style,note:d.note.trim(),photos,status:"generating",createdAt:Date.now(),marks:{words:{},q:{},stuckChars:"",done:false}};
+  await setCard(id,doc);
+  if(!S.cards[id])S.cards[id]=doc;
+  d.files.forEach(f=>URL.revokeObjectURL(f.url));S.draft=null;
+  S.sel=id;S.view="card";renderList();renderMain();
+  runSample(id,blobs,"");
+}
+
+/* ---------------- 卡片 ---------------- */
+function renderCard(id){
+  const c=S.cards[id];if(!c){S.view="new";return renderNew()}
+  const k=c.card;const m=c.marks||{};
+  const metaParts=[dayLabel(c.date)+" "+(c.date?weekday(c.date):""),c.book,c.mode,c.style&&c.style!=="标准"?c.style:"",c.example?"示例卡":""].filter(Boolean);
+  const photos=arr(c.photos).length?`<div class="photos">${arr(c.photos).map((p,i)=>`<button data-photo="${esc(p)}" aria-label="看第 ${i+1} 页照片"><img data-ph="${esc(p)}" src="${blobUrl(p)}" alt=""></button>`).join("")}</div>`:"";
+  const title=`<div class="title"><div class="meta">${metaParts.map(x=>`<span>${esc(x)}</span>`).join("")}</div><h1>${esc(k?.title||"今天这一篇")}</h1>${k?.summary?`<p>${esc(k.summary)}</p>`:""}${photos}</div>`;
+
+  if(S.live[id]||(c.status==="generating"&&!k&&Date.now()-(c.createdAt||0)<8*60e3)){
+    $("#main").innerHTML=title+`<div class="block gen"><div class="spin"></div><h2>Claude 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</div>`;
+    return;
+  }
+  if(!k){
+    $("#main").innerHTML=title+`<div class="block"><h2>卡片没生成出来</h2><div class="err">${esc(c.error||"生成中断了。")}</div>
+      <div class="row"><button class="btn" data-act="retry" ${cap.sample?"":"disabled"}>再试一次</button><button class="link red" data-act="del">删掉这一篇</button></div></div>`;
+    return;
+  }
+  const B=[];let n=0;
+  const step=(h,body)=>`<div class="block step"><div class="num">${++n}</div><div class="body"><h2>${h}</h2>${body}</div></div>`;
+  const ans=(label,txt)=>txt?`<details class="ans"><summary>${label}</summary><div class="a">${esc(txt)}</div></details>`:"";
+
+  if(k.problems)B.push(`<div class="note">${esc(k.problems)}</div>`);
+  if(c.error&&c.status!=="generating")B.push(`<div class="err">上次重新生成没成功：${esc(c.error)}</div>`);
+  if(k.tips.length)B.push(`<div class="block"><h2>先看一眼</h2><ul class="plain">${k.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`);
+
+  if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}`));
+  B.push(step("一起读",`<p>你带读一句，问问跟读一句。</p>${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+
+  if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
+      <div class="zi"><span class="py">${esc(w.pinyin)}</span><b>${esc(w.word)}</b></div>
+      <div class="txt">${w.meaning?`<p>${esc(w.meaning)}${w.isIdiom?`<span class="tag">成语</span>`:""}</p>`:""}${w.play?`<p><span class="k">玩一玩</span>${esc(w.play)}</p>`:""}${w.link?`<p><span class="k">联系问问</span>${esc(w.link)}</p>`:""}</div>
+      <div class="acts"><button class="mk say" data-say="${esc(w.word)}" aria-label="读 ${esc(w.word)}">🔊</button><button class="mk ok" data-wm="${esc(w.word)}" data-v="ok" aria-pressed="${st==="ok"}">会了</button><button class="mk no" data-wm="${esc(w.word)}" data-v="stuck" aria-pressed="${st==="stuck"}">卡壳</button></div></div>`}).join("")}</div>`));
+
+  if(k.retell.items.length)B.push(step(k.retell.type==="神兽档案"?"说说神兽档案":"讲讲这个故事",`<p class="muted">你说前半句，问问接后半句。</p><div class="list-rows">${k.retell.items.map(s=>`<div class="rt"><span class="lb">${esc(s.label)}</span><div><p class="pr">${esc(s.prompt)}</p>${ans("看答案",s.answer)}</div></div>`).join("")}</div>`));
+
+  if(k.questions.length)B.push(step("两道题",`<div class="list-rows">${k.questions.map((q,i)=>{const st=m.q?.["q"+i]||"";return`<div class="qq"><span class="k">${esc(q.type||"")}</span><p class="qt">${esc(q.q)}</p><div>${ans("提示",q.hint)}${ans("参考答案",q.answer)}</div>
+      <div class="row" style="gap:6px"><button class="mk ok" data-qm="q${i}" data-v="yes" aria-pressed="${st==="yes"}">自己答出</button><button class="mk mid" data-qm="q${i}" data-v="hint" aria-pressed="${st==="hint"}">提示后答出</button><button class="mk no" data-qm="q${i}" data-v="no" aria-pressed="${st==="no"}">还不会</button></div></div>`}).join("")}</div>`));
+
+  if(k.chat)B.push(step("读完聊一句",`<p class="say-line">“${esc(k.chat)}”</p>`));
+  const ex=k.examinerQuestions.filter(x=>x.q);
+  if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>`));
+
+  B.push(step("读完了",`<label class="field"><span>今天卡壳的字（可不填）</span><input type="text" id="stuckChars" value="${esc(m.stuckChars||"")}" placeholder="比如：衔 填 淹"></label>
+    <button class="donebtn ${m.done?"on":""}" data-act="done">${m.done?"✓ 今天读完啦（点一下撤销）":"今天读完啦"}</button>`));
+
+  const coll=[];
+  if(k.beasts.length)coll.push(`<div class="cols">${k.beasts.map((b,i)=>beastHTML(b,i===0?(m.drawing||""):undefined)).join("")}</div>`);
+  if(k.people.length)coll.push(`<div class="cols">${k.people.map(personHTML).join("")}</div>`);
+  if(k.task?.name)coll.push(`<p><b>小任务：${esc(k.task.name)}</b>　${esc(k.task.desc)}</p>${cap.assets?`<div class="row"><label class="btn light" style="position:relative">${m.drawing?"换一张作品":"拍下问问的作品"}<input type="file" id="drawFile" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%"></label></div>`:""}`);
+  if(coll.length)B.push(`<div class="block"><h2>收进积累本</h2>${coll.join("")}</div>`);
+
+  B.push(`<div class="row" style="justify-content:space-between;padding:0 4px">
+    <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 Claude 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
+    <button class="link red" data-act="del">删掉这一篇</button></div>`);
+  $("#main").innerHTML=title+B.join("");
+}
+function beastHTML(b,drawing){return`<div class="coll"><div class="nm">${esc(b.name)}<small>${esc(b.pinyin)}</small></div>
+  <dl>${b.home?`<dt>住在</dt><dd>${esc(b.home)}</dd>`:""}${b.look?`<dt>样子</dt><dd>${esc(b.look)}</dd>`:""}${b.power?`<dt>本领</dt><dd>${esc(b.power)}</dd>`:""}${b.compare?`<dt>比一比</dt><dd>${esc(b.compare)}</dd>`:""}</dl>
+  ${drawing!==undefined?`<div class="pic">${drawing?`<img data-ph="${esc(drawing)}" src="${blobUrl(drawing)}" alt="问问画的${esc(b.name)}">`:"等问问来画"}</div>`:""}</div>`}
+function personHTML(p){return`<div class="coll"><div class="nm">${esc(p.name)}</div>${p.nick?`<p class="muted">${esc(p.nick)}</p>`:""}<p>${esc(p.trait)}</p></div>`}
+
+let delArm=0;
+$("#main").addEventListener("click",async e=>{
+  const t=e.target.closest("button,[data-photo]");if(!t)return;
+  if(t.closest("[data-seg]")){const g=t.closest("[data-seg]").dataset.seg;S.draft[g]=t.dataset.v;renderNew();return}
+  if(t.dataset.rm!==undefined){const f=S.draft.files.splice(+t.dataset.rm,1)[0];if(f)URL.revokeObjectURL(f.url);renderNew();return}
+  if(t.id==="genBtn"){generate();return}
+  if(t.dataset.photo){const pid=t.dataset.photo;$("#lbImg").src=blobUrl(pid);$("#lb").hidden=false;loadPhoto(pid).then(u=>{$("#lbImg").src=u}).catch(()=>{});return}
+  if(t.dataset.say){say(t.dataset.say);return}
+  const id=S.sel,c=S.cards[id];if(!c)return;
+  if(t.dataset.wm){const cur=c.marks?.words?.[t.dataset.wm];const v=cur===t.dataset.v?"":t.dataset.v;
+    c.marks=deepMerge(c.marks||{},{words:{[t.dataset.wm]:v}});renderCard(id);updCard(id,{marks:{words:{[t.dataset.wm]:v}}});return}
+  if(t.dataset.qm){const cur=c.marks?.q?.[t.dataset.qm];const v=cur===t.dataset.v?"":t.dataset.v;
+    c.marks=deepMerge(c.marks||{},{q:{[t.dataset.qm]:v}});renderCard(id);updCard(id,{marks:{q:{[t.dataset.qm]:v}}});return}
+  const act=t.dataset.act;
+  if(act==="done"){const v=!c.marks?.done;c.marks=deepMerge(c.marks||{},{done:v});c.status=v?"done":"ready";renderCard(id);renderList();
+    updCard(id,{marks:{done:v},status:v?"done":"ready",doneAt:v?Date.now():0});if(v)toast("太棒了，问问今天又读完一篇！");return}
+  if(act==="retry"||act==="redo"){
+    if(!cap.sample){toast("先在「设置」里粘贴 Claude 钥匙");return}
+    const extra=act==="redo"?($("#redoText")?.value||"").trim():"";
+    const blobs=await photoBlobs(c);if(!blobs.length){toast("找不到这篇的照片，请重新准备一篇");return}
+    if(!c.card)await updCard(id,{status:"generating",createdAt:Date.now(),error:""});
+    runSample(id,blobs,extra);return}
+  if(act==="del"){if(Date.now()-delArm>4000){delArm=Date.now();t.textContent="再点一次就删掉（照片也会删）";return}
+    delArm=0;const ph=[...arr(c.photos),...(c.marks?.drawing?[c.marks.drawing]:[])];await delCard(id);
+    if(cap.assets)for(const p of ph){try{await cap.assets.delete(p)}catch(e){}}
+    S.sel=null;S.view="new";toast("删掉了");renderList();renderMain();return}
+});
+async function uploadDrawing(file){
+  if(!file||!cap.assets)return;const id=S.sel;toast("正在保存作品…");
+  try{const b=await shrink(file);const r=await cap.assets.upload(b,{type:b.type||"image/jpeg"});const old=S.cards[id]?.marks?.drawing;
+    await updCard(id,{marks:{drawing:r.id}});if(old){try{await cap.assets.delete(old)}catch(e){}}toast("作品收进图鉴了");}
+  catch(e){toast("没存上，换一张再试")}
+}
+$("#lb").addEventListener("click",()=>{$("#lb").hidden=true});
+
+/* ---------------- 积累本 ---------------- */
+function renderBank(){
+  const cs=sortedCards().filter(c=>c.card&&!c.example);
+  const all=sortedCards().filter(c=>c.card);
+  const src=cs.length?cs:all;
+  const done=src.filter(c=>c.marks?.done);
+  const days=new Set(done.map(c=>c.date));let streak=0,d=days.has(today())?today():addDays(today(),-1);while(days.has(d)){streak++;d=addDays(d,-1)}
+  const stuck=[],learned=new Map(),beasts=[],people=new Map();
+  for(const c of src){
+    for(const w of c.card.words){if(!w?.word)continue;const st=c.marks?.words?.[w.word];
+      if(st==="stuck")stuck.push({kind:"w",id:c.id,word:w.word,py:w.pinyin,from:c.card.title});
+      if(!learned.has(w.word))learned.set(w.word,{...w,stuck:st==="stuck"})}
+    for(const ch of [...new Set((c.marks?.stuckChars||"").replace(/[\s，,、。]/g,""))])stuck.push({kind:"c",id:c.id,word:ch,from:c.card.title});
+    c.card.beasts.forEach((b,i)=>beasts.push({...b,drawing:i===0?(c.marks?.drawing||""):""}));
+    for(const p of c.card.people)if(p?.name&&!people.has(p.name))people.set(p.name,p);
+  }
+  const words=[...learned.values()];
+  const sec=(h,sub,body)=>`<div class="block"><h2>${h}</h2>${sub?`<p class="muted">${sub}</p>`:""}${body}</div>`;
+  $("#v-bank").innerHTML=`
+  ${!cs.length&&all.length?`<div class="note">现在显示的是示例卡的内容。问问读完第一篇后，这里就换成他自己的积累。</div>`:""}
+  <div class="nums"><div><b>${done.length}</b><span>篇读完</span></div><div><b>${streak}</b><span>天连续</span></div><div><b>${words.length}</b><span>个字词</span></div><div><b>${beasts.length}</b><span>只神兽</span></div><div><b>${people.size}</b><span>位人物</span></div></div>
+  ${sec("待巩固","问问认得了，点一下就移走。",stuck.length?`<div class="chips">${stuck.map(s=>`<button class="wc no" data-fix="${esc(s.kind)}|${esc(s.id)}|${esc(s.word)}"><span class="py">${esc(s.py||"")}</span><b>${esc(s.word)}</b><small>${esc(s.from||"")}</small></button>`).join("")}</div>`:`<p class="empty">还没有卡壳的字。</p>`)}
+  ${sec("认过的字词","点一下听读音。",words.length?`<div class="chips">${words.map(w=>`<button class="wc ${w.stuck?"no":""}" data-say="${esc(w.word)}"><span class="py">${esc(w.pinyin)}</span><b>${esc(w.word)}</b></button>`).join("")}</div>`:`<p class="empty">生成第一张伴读卡后，字词会收在这里。</p>`)}
+  ${sec("神兽图鉴","",beasts.length?`<div class="cols">${beasts.map(b=>beastHTML(b,b.drawing)).join("")}</div>`:`<p class="empty">读到神兽的篇目，神兽会收在这里。</p>`)}
+  ${sec("三国人物卡","",people.size?`<div class="cols">${[...people.values()].map(personHTML).join("")}</div>`:`<p class="empty">开始读《三国演义》后，人物会收在这里。</p>`)}`;
+}
+$("#v-bank").addEventListener("click",e=>{
+  const s=e.target.closest("[data-say]");if(s){say(s.dataset.say);return}
+  const f=e.target.closest("[data-fix]");if(!f)return;
+  const[kind,id,word]=f.dataset.fix.split("|");const c=S.cards[id];if(!c)return;
+  if(kind==="w"){c.marks=deepMerge(c.marks||{},{words:{[word]:"ok"}});updCard(id,{marks:{words:{[word]:"ok"}}})}
+  else{const v=(c.marks?.stuckChars||"").split(word).join("").replace(/\s+/g," ").trim();c.marks=deepMerge(c.marks||{},{stuckChars:v});updCard(id,{marks:{stuckChars:v}})}
+  toast("“"+word+"”认得啦");renderBank();
+});
+
+/* ---------------- 设置 ---------------- */
+function renderSet(){
+  const p=S.profile||{};
+  $("#v-set").innerHTML=`<div class="block"><h2>两把钥匙</h2><p class="muted">每台设备（iPad、电脑）各弄一次，以后不用再管。</p>
+    <div class="field"><span>同步钥匙（GitHub）${ghKey()?"　✓ 已设置":""}</span>
+      <p class="muted" style="margin:0">${ls.get("xdj:key","")&&!ls.get("wwbd:ghkey","")?"这台设备已经在用星星积分卡的同步钥匙，不用再贴。":"和星星积分卡用的是同一把，粘贴 github_pat_ 开头的那串。"}</p>
+      <div class="row"><input type="password" id="k-gh" autocomplete="off" placeholder="${ghKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 github_pat_…"}" style="flex:1 1 220px"><button class="btn light" id="k-gh-save">保存</button></div></div>
+    <div class="field"><span>Claude 钥匙${apiKey()?"　✓ 已设置":""}</span>
+      <p class="muted" style="margin:0">在 console.anthropic.com 的 API Keys 里新建一把，粘贴 sk-ant- 开头的那串。只存在这台设备上。</p>
+      <div class="row"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-ant-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
+    </div>
+    <div class="block"><h2>关于问问</h2><p class="muted">Claude 写卡片时会参考这些。</p>
+    <div class="row"><label class="field" style="flex:1 1 160px"><span>名字</span><input type="text" id="p-name" value="${esc(p.name||"问问")}"></label>
+    <label class="field" style="flex:1 1 200px"><span>年级</span><select id="p-grade">${["小学一年级上学期","小学一年级下学期","小学二年级上学期","小学二年级下学期"].map(g=>`<option ${g===p.grade?"selected":""}>${g}</option>`).join("")}</select></label></div>
+    <label class="field"><span>喜欢的东西</span><textarea id="p-likes" rows="5">${esc(p.likes||"")}</textarea></label>
+    <label class="field"><span>课内正在学的字（可不填）</span><textarea id="p-class" placeholder="比如：一 二 三 上 下 口 耳 目">${esc(p.inClass||"")}</textarea></label>
+    <label class="field"><span>常读的书（用逗号隔开）</span><input type="text" id="p-books" value="${esc((p.books||["山海经","三国演义"]).join("，"))}"></label>
+    <div class="row"><button class="btn" id="p-save">保存</button></div></div>
+        <div class="block"><h2>怎么用</h2><ul class="plain">
+      <li>提前点“准备新的一篇”，拍下要读的书页，Claude 会写好伴读卡。</li>
+      <li>卡片按步骤从上往下用就行。答案都折起来了，可以把 iPad 给问问一起看。</li>
+      <li>读完点字词的“会了”或“卡壳”，最后点“今天读完啦”。卡壳的字会进积累本，以后再出现时会提醒你。</li>
+      <li>生成一篇伴读卡大约花几毛钱，从你的 Claude 账户余额里扣。</li>
+    </ul></div>`;
+}
+$("#v-set").addEventListener("click",async e=>{
+  if(e.target.id==="k-gh-save"){const v=$("#k-gh").value.trim();if(!v)return;ls.set("wwbd:ghkey",v);ls.set("wwbd:gist",null);refreshCap();renderSet();toast("同步钥匙存好了");DB.sync();return}
+  if(e.target.id==="k-ai-save"){const v=$("#k-ai").value.trim();if(!v)return;if(!/^sk-ant-/.test(v)){toast("Claude 钥匙应该是 sk-ant- 开头的");return}ls.set("wwbd:apikey",v);refreshCap();renderSet();toast("Claude 钥匙存好了");return}
+  if(e.target.id!=="p-save")return;
+  const p={name:$("#p-name").value.trim()||"问问",grade:$("#p-grade").value,likes:$("#p-likes").value.trim(),inClass:$("#p-class").value.trim(),books:$("#p-books").value.split(/[,，、]/).map(s=>s.trim()).filter(Boolean)};
+  S.profile=p;
+  DB.put("settings","profile",p);
+  toast("保存好了");
+});
+
+/* ---------------- 切换 ---------------- */
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
+  S.tab=b.dataset.tab;document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  $("#v-cards").hidden=S.tab!=="cards";$("#v-bank").hidden=S.tab!=="bank";$("#v-set").hidden=S.tab!=="set";
+  if(S.tab==="bank")renderBank();if(S.tab==="set")renderSet();
+}));
+function renderMain(){if(S.view==="card"&&S.sel&&S.cards[S.sel])renderCard(S.sel);else{S.view="new";renderNew()}}
+function onCardsChanged(changedId){
+  renderList();
+  if(S.tab==="bank")renderBank();
+  if(S.view==="card"&&(!changedId||changedId===S.sel)){
+    if(document.activeElement?.id==="stuckChars"||document.activeElement?.id==="redoText")return;
+    renderMain();
+  }
+}
+function firstView(){
+  if(S.loaded)return;S.loaded=true;
+  const cs=sortedCards();const t=cs.find(c=>c.date===today()&&!c.example);
+  if(t){S.sel=t.id;S.view="card"}else if(cs.length&&cs.every(c=>c.example)){S.sel=cs[0].id;S.view="card"}else{S.view="new"}
+  renderList();renderMain();
+}
+
+/* ---------------- 启动 ---------------- */
+/* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
+const BUILD="90286e9198";
+if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
+  chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
+new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
+(function init(){
+  refreshCap();
+  const pull=()=>{const m={...DB.data.cards};for(const id in S.live)if(!m[id]&&S.cards[id])m[id]=S.cards[id];S.cards=m;S.profile=DB.data.settings.profile||null};
+  pull();firstView();
+  DB.subs.push(()=>{pull();if(S.loaded)onCardsChanged(null);if(S.tab==="set"&&document.activeElement?.closest?.("#v-set")==null)renderSet()});
+  DB.start();
+})();
+</script>
+</body></html>
