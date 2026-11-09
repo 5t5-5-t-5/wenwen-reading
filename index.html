@@ -354,7 +354,7 @@ function renderList(){
   const cs=sortedCards();const show=S.showAll?cs:cs.slice(0,14);
   $("#list").innerHTML=show.length?show.map(c=>`<button class="item" data-id="${esc(c.id)}" aria-current="${S.view==="card"&&S.sel===c.id}">
       <span class="d">${esc(dayLabel(c.date))}<br>${esc(c.date?weekday(c.date):"")}</span>
-      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}<small>${esc(c.book||"")} · ${esc(c.mode||"")}${c.example?" · 示例":""}</small></span>
+      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}<small>${esc([c.book,c.mode,c.example?"示例":""].filter(Boolean).join(" · "))}</small></span>
       ${statusText(c)}</button>`).join(""):`<div class="item"><span></span><span class="empty">还没有伴读卡</span><span></span></div>`;
   $("#list").insertAdjacentHTML("afterend","");
   const mb=$("#moreBtn");if(mb)mb.remove();
@@ -375,19 +375,14 @@ function renderNew(){
   $("#main").innerHTML=`<div class="block">
     <h2>准备新的一篇</h2>
     <div class="field"><span>书页照片</span>
-      <label class="drop">＋ 拍照或选照片<small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>
+      <label class="drop">＋ 拍照或选照片<small>标题那页也拍上，Claude 会自己认出题目。可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>
       ${d.files.length?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}</div>`:""}
-    </div>
-    <div class="row">
-      <label class="field" style="flex:1 1 160px"><span>哪天读</span><input type="date" id="f-date" value="${esc(d.date)}"></label>
-      <label class="field" style="flex:2 1 200px"><span>文章名称（可不填）</span><input type="text" id="f-book" placeholder="比如：精卫填海" value="${esc(d.book)}"></label>
     </div>
     <div class="row" style="align-items:flex-start;gap:24px">
       <div class="field"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div>
       <div class="field"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div>
     </div>
     ${d.mode==="泛读"||STYLE_HELP[d.style]?`<p class="muted">${d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":""}${STYLE_HELP[d.style]}</p>`:""}
-    <label class="field"><span>想告诉 Claude 的（可不填）</span><textarea id="f-note" placeholder="比如：他对“衔”字老读错；这篇想多讲讲后羿">${esc(d.note)}</textarea></label>
     ${!cap.sample?`<div class="note">还没设置 Claude 钥匙。到上面「设置」里粘贴一次，这台设备以后就能生成伴读卡了。</div>`:""}
     <div class="row"><button class="btn" id="genBtn" ${canGen?"":"disabled"}>生成伴读卡</button><span class="muted" id="genMsg"></span></div>
   </div>`;
@@ -442,11 +437,10 @@ function buildPrompt(c,extra){
 
 【今天】
 日期：${c.date}（${weekday(c.date)}）
-文章名称：${c.book||"（家长没写，请从照片里认出这篇的题目）"}
+文章题目：${c.book||"看照片：字号最大的那行字就是这篇的题目"}
 方式：${c.mode}
 玩法：${c.style||"标准"}
-家长备注：${c.note||"无"}
-
+${c.note?"家长备注："+c.note+"\n":""}
 【以前学过的字词】（用来做复现提醒）
 ${pw.ws.length?pw.ws.join("、"):"还没有"}
 其中还没掌握、卡壳过的：${pw.stuck.length?pw.stuck.join("、"):"无"}
@@ -468,7 +462,7 @@ ${fan?"10. 今天是泛读：重点是读得开心。words、questions 都返回
 ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
 【只回复一个 JSON 对象，字段如下】
 {
- "title": "这篇的题目",
+ "title": "这篇的题目：照片里字号最大的那行字，原样照抄，不要改写",
  "kind": "神话故事" 或 "神兽档案" 或 "历史故事" 或 "其他",
  "summary": "给家长的一句话：这篇讲了什么",
  "problems": "照片有问题时写，没有就写空字符串",
@@ -526,8 +520,8 @@ async function generate(){
     if(photos.length<blobs.length)toast("有照片没存上，不影响生成");
   }else{toast("还没设置同步钥匙，照片这次不保存");
   }
-  const id=d.date+"-"+Date.now().toString(36);
-  const doc={date:d.date,book:d.book.trim(),mode:d.mode,style:d.style,note:d.note.trim(),photos,status:"generating",createdAt:Date.now(),marks:{words:{},q:{},stuckChars:"",done:false}};
+  const date=today(),id=date+"-"+Date.now().toString(36);
+  const doc={date,book:"",mode:d.mode,style:d.style,note:"",photos,status:"generating",createdAt:Date.now(),marks:{words:{},q:{},stuckChars:"",done:false}};
   await setCard(id,doc);
   if(!S.cards[id])S.cards[id]=doc;
   d.files.forEach(f=>URL.revokeObjectURL(f.url));S.draft=null;
@@ -725,7 +719,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="81af48e044";
+const BUILD="fc1923901e";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
