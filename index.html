@@ -1,186 +1,239 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon-512.png"><meta name="apple-mobile-web-app-title" content="问问伴读"><meta name="theme-color" content="#E6F2FF"></head><body>
 <title>问问伴读</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* 照着星星积分卡：浅蓝底、白色块（底部一道浅蓝"立体"阴影）、顶部一张金色卡片。
-   这页是给家长读的：全部用系统正文字体（iPad 上是苹方），不用卡通字体；正文 17px、行距宽松。
-   颜色：深蓝字、灰字、金黄（卡片和选中）、绿色（会了/读完）、红色（卡壳）。 */
+/* 问问伴读 · 设计
+   给家长在 iPad 上一边陪读一边看的页面：内容为主，安静、留白足、一屏只有一个最强的按钮。
+   底色是很淡的冷灰白；蓝色（和图标同色）只做提示、链接和步骤序号；金黄只给最主要的那个按钮；
+   绿/红只在标“会了/卡壳”时出现。标题和要对孩子说的话用宋体，字词用楷体写在田字格里，其他都是苹方。 */
 :root{
   color-scheme:light;
-  --sky:#E6F2FF; --ink:#1F2B57; --soft:#5F6B8A; --white:#FFFFFF; --line:#D5E3F5;
-  --sun:#FFC83D; --sun-deep:#E8890C; --sun-pale:#FFF4D2; --brown:#4A2600;
-  --mint:#1DB37A; --mint-pale:#DDF7EB;
-  --coral:#FF5F57; --coral-pale:#FFE3E1;
-  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --bg:#F3F6FA; --surface:#FFFFFF; --sunk:#F6F8FB;
+  --ink:#1B2435; --ink2:#4A5468; --muted:#8C95A6; --line:#E5EAF1;
+  --blue:#2F7FDB; --blue-pale:#EAF3FD; --blue-line:#BFD6F1;
+  --gold:#FFBE3B; --gold-ink:#3D2A00; --gold-pale:#FFF6E0; --gold-text:#8A5A00;
+  --green:#1F9466; --green-pale:#E4F5EC; --grid:#A9D8BF;
+  --red:#D24E3E; --red-pale:#FCEBE8;
+  --shadow:0 1px 2px rgba(27,36,53,.04),0 8px 24px rgba(27,36,53,.06);
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --serif:"Noto Serif SC","Songti SC","STSong",serif;
+  --kai:"Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
 }
 [hidden]{display:none!important}
-html,body{background:var(--sky);color:var(--ink)}
-body{font-family:var(--font);font-weight:400;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
-  background-image:radial-gradient(circle at 12% 8%,#fff 0 60px,transparent 61px),radial-gradient(circle at 90% 3%,#fff 0 40px,transparent 41px);background-repeat:no-repeat}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font-family:var(--sans);font-size:17px;line-height:1.7;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--sun-deep);outline-offset:2px}
+:focus-visible{outline:3px solid var(--blue-line);outline-offset:2px}
 p{margin:0}
+h1,h2,h3{margin:0;text-wrap:balance}
 b,strong{font-weight:600}
 
-.wrap{max-width:1180px;margin:0 auto;padding-block:16px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:20px 80px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:32px}
 
 /* 顶栏 */
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.02em}
-.tabs{display:flex;background:var(--white);border-radius:999px;padding:4px;box-shadow:0 3px 0 var(--line)}
-.tabs button{border:0;background:none;border-radius:999px;padding:7px 18px;font-size:16px;font-weight:600;color:var(--soft)}
-.tabs button[aria-pressed="true"]{background:var(--sun);color:var(--ink)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:600;letter-spacing:.04em}
+.brand img{width:34px;height:34px;border-radius:9px;display:block}
+.tabs{display:flex;background:#E7ECF3;border-radius:12px;padding:3px}
+.tabs button{border:0;background:none;border-radius:9px;padding:6px 18px;font-size:15px;color:var(--ink2)}
+.tabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(27,36,53,.12)}
 
-/* 两栏 */
-.cards{display:flex;flex-direction:column;gap:18px}
-.side{display:flex;flex-direction:column;gap:12px}
-.newbtn{border:0;border-radius:18px;background:var(--sun);color:var(--brown);font-size:17px;font-weight:700;padding:13px;box-shadow:0 4px 0 var(--sun-deep)}
-.newbtn:active{transform:translateY(3px);box-shadow:none}
-.list{display:flex;flex-direction:column;gap:8px}
-.item{border:0;text-align:left;background:var(--white);border-radius:18px;padding:11px 14px;display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;box-shadow:0 4px 0 var(--line)}
-.item[aria-current="true"]{background:var(--sun-pale);box-shadow:0 4px 0 var(--sun)}
-.item .d{font-size:13px;color:var(--soft);line-height:1.35}
-.item .t{min-width:0;font-weight:600;font-size:16px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.item .t small{display:block;font-weight:400;font-size:13px;color:var(--soft)}
-.item .s{font-size:13px;color:var(--soft);white-space:nowrap}
-.item .s.ok{color:var(--mint);font-weight:600}
-.more{border:0;background:none;color:var(--soft);font-size:14px;padding:6px}
-.main{min-width:0;display:flex;flex-direction:column;gap:14px}
+/* 两栏：左边往期，右边正文 */
+.cards{display:flex;flex-direction:column;gap:40px}
+.main{order:1;min-width:0;display:flex;flex-direction:column;gap:20px}
+.wrap>.main{order:0;width:100%;max-width:860px;margin:0 auto}
+.side{order:2;display:flex;flex-direction:column;gap:4px}
+.side-h{display:flex;align-items:center;justify-content:space-between;padding:0 12px 8px}
+.side-h span{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.08em}
+.addbtn{border:0;background:none;color:var(--blue);font-size:15px;font-weight:600;padding:4px 0}
+.list{display:flex;flex-direction:column;gap:2px}
+.item{border:0;background:none;text-align:left;border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 10px;align-items:center}
+.item:hover{background:rgba(255,255,255,.6)}
+.item[aria-current="true"]{background:var(--surface);box-shadow:var(--shadow)}
+.item .t{min-width:0;font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .d{grid-column:1/-1;font-size:13px;color:var(--muted);line-height:1.5}
+.item .s{font-size:12px;color:var(--muted);white-space:nowrap}
+.item .s.ok{color:var(--green);font-weight:600}
+.item .s.bad{color:var(--red)}
+.more{border:0;background:none;color:var(--muted);font-size:14px;padding:8px 12px;text-align:left}
+.empty{color:var(--muted);font-size:15px}
+.side .empty{padding:4px 12px}
 
-/* 白块（和积分卡的格子同一种立体感） */
-.block{background:var(--white);border-radius:22px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 5px 0 var(--line)}
-.block h2{margin:0;font-size:19px;font-weight:700}
-.muted{color:var(--soft);font-size:15px}
-.btn{border:0;border-radius:999px;padding:10px 22px;font-size:16px;font-weight:700;background:var(--sun);color:var(--brown);box-shadow:0 4px 0 var(--sun-deep)}
-.btn:active{transform:translateY(3px);box-shadow:none}
-.btn:disabled{opacity:.4;transform:none}
-.btn.light{background:var(--sky);color:var(--ink);box-shadow:0 4px 0 var(--line)}
-.link{border:0;background:none;padding:4px 0;color:var(--soft);font-size:14px;text-decoration:underline}
-.link.red{color:var(--coral)}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.note{background:var(--sun-pale);border-radius:16px;padding:10px 14px;font-size:15px}
-.err{background:var(--coral-pale);border-radius:16px;padding:10px 14px;font-size:15px}
+/* 白色面板：一个面板 = 一件事 */
+.block{background:var(--surface);border-radius:20px;padding:28px 32px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow)}
+.block h2{font-size:20px;font-weight:600;line-height:1.4}
+.muted{color:var(--muted);font-size:15px}
+.btn{border:0;border-radius:12px;padding:11px 22px;font-size:16px;font-weight:600;background:var(--gold);color:var(--gold-ink);transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{background:#EDF0F4;color:#A9B1BE;cursor:default;transform:none}
+.btn.light{background:var(--blue-pale);color:var(--blue)}
+.btn.big{width:100%;padding:16px;font-size:18px;border-radius:14px}
+.link{border:0;background:none;padding:4px 0;color:var(--muted);font-size:14px}
+.link.red{color:var(--red)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.note{background:var(--gold-pale);color:var(--gold-text);border-radius:12px;padding:12px 16px;font-size:15px}
+.err{background:var(--red-pale);color:#8A2A1F;border-radius:12px;padding:12px 16px;font-size:15px}
+.eyebrow{font-size:14px;font-weight:600;color:var(--blue);letter-spacing:.04em}
 
 /* 表单 */
-.field{display:flex;flex-direction:column;gap:6px}
-.field>span{font-weight:600;font-size:15px}
-.field input[type=date],.field input[type=text],.field textarea,.field select{border:2px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;min-width:0;font-size:16px}
-.field textarea{min-height:64px;resize:vertical}
-.seg{display:flex;flex-wrap:wrap;gap:6px}
-.seg button{border:0;background:var(--sky);border-radius:999px;padding:6px 16px;font-size:15px;font-weight:600;color:var(--soft)}
-.seg button[aria-pressed="true"]{background:var(--sun);color:var(--ink)}
-.drop{position:relative;border:2px dashed #A9C1E0;border-radius:18px;background:var(--sky);padding:22px;text-align:center;font-size:17px;font-weight:600}
-.drop small{display:block;font-weight:400;font-size:14px;color:var(--soft)}
-.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
-.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.thumb{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:var(--sky)}
+.field{display:flex;flex-direction:column;gap:8px}
+.field>span{font-size:14px;font-weight:600;color:var(--ink2)}
+.field input[type=text],.field input[type=password],.field textarea,.field select{border:1px solid var(--line);border-radius:12px;padding:11px 14px;background:var(--sunk);font-size:16px;min-width:0;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--blue);background:var(--surface);box-shadow:0 0 0 3px var(--blue-pale)}
+.field textarea{min-height:72px;resize:vertical;line-height:1.6}
+.row.field{flex-direction:row}
+.seg{display:inline-flex;background:#EEF2F7;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:8px;padding:6px 16px;font-size:15px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(27,36,53,.12)}
+
+/* 准备新的一篇 */
+.hero{padding:40px 40px 36px;gap:28px}
+.hero-t{display:flex;flex-direction:column;gap:8px}
+.hero h2{font-family:var(--serif);font-size:34px;font-weight:700;line-height:1.3;letter-spacing:.02em}
+.lead{color:var(--ink2);font-size:17px;max-width:34em}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:220px;border:1.5px dashed var(--blue-line);border-radius:16px;background:var(--blue-pale);color:var(--blue);font-size:18px;font-weight:600;text-align:center;padding:24px}
+.drop svg{width:46px;height:46px;margin-bottom:4px}
+.drop small{font-size:14px;font-weight:400;color:var(--muted)}
+.drop input,.addtile input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.thumb{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:#EEF2F7;max-width:100%}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb .no{position:absolute;left:6px;top:6px;background:var(--ink);color:#fff;border-radius:999px;font-size:12px;padding:0 7px}
-.thumb .x{position:absolute;right:6px;top:6px;border:0;width:28px;height:28px;border-radius:50%;background:var(--white);color:var(--ink);font-weight:700}
+.thumb .no{position:absolute;left:8px;top:8px;background:rgba(27,36,53,.72);color:#fff;border-radius:999px;font-size:12px;line-height:20px;padding:0 8px}
+.thumb .x{position:absolute;right:6px;top:6px;border:0;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.94);color:var(--ink);font-size:14px;box-shadow:0 1px 3px rgba(27,36,53,.2)}
+.addtile{position:relative;aspect-ratio:3/4;max-width:100%;border:1.5px dashed var(--blue-line);border-radius:12px;background:var(--blue-pale);color:var(--blue);display:grid;place-items:center;font-size:15px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:16px 36px;align-items:center}
+.opt{display:flex;align-items:center;gap:12px}
+.opt>span{font-size:14px;color:var(--muted)}
+.gobar{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.gobar .muted{text-align:center;min-height:1em}
 
 /* 生成中 */
-.gen{align-items:center;text-align:center;padding:36px 20px}
-.spin{width:44px;height:44px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--sun-deep);animation:spin 1s linear infinite}
+.gen{align-items:center;text-align:center;padding:64px 32px;gap:12px}
+.spin{width:40px;height:40px;border-radius:50%;border:4px solid var(--blue-pale);border-top-color:var(--blue);animation:spin 1s linear infinite;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* 卡片头：积分卡同款金色卡 */
-.title{position:relative;overflow:hidden;border-radius:22px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;color:var(--brown);
-  background:repeating-linear-gradient(115deg,rgba(255,255,255,.10) 0 2px,transparent 2px 9px),radial-gradient(120% 90% at 100% 0%,#FFF1A8 0%,transparent 45%),linear-gradient(135deg,#FFD95A 0%,#F7B52C 50%,#E8851A 100%);
-  box-shadow:0 12px 26px rgba(232,133,26,.3),inset 0 0 0 2px rgba(255,255,255,.35)}
-.title::before{content:"★";position:absolute;right:-10px;bottom:-60px;font-size:200px;line-height:1;color:#fff;opacity:.16;transform:rotate(14deg);pointer-events:none}
-.title>*{position:relative}
-.title .meta{display:flex;flex-wrap:wrap;gap:6px}
-.title .meta span{background:var(--brown);color:#FFE9A8;border-radius:999px;padding:1px 12px;font-size:13px;font-weight:600}
-.title h1{margin:0;font-size:30px;font-weight:700;line-height:1.3;text-wrap:balance}
-.title p{max-width:60ch;font-size:16px}
-.photos{display:flex;gap:6px;overflow-x:auto;padding-top:4px}
-.photos button{flex:none;border:2px solid rgba(255,255,255,.7);border-radius:8px;padding:0;width:46px;height:60px;overflow:hidden;background:rgba(255,255,255,.4)}
+/* 卡片头：不加框，靠字号和留白 */
+.ch{display:flex;flex-direction:column;gap:10px;padding:12px 4px 8px}
+.ch h1{font-family:var(--serif);font-size:42px;font-weight:700;line-height:1.25;letter-spacing:.03em}
+.ch .sum{font-size:18px;color:var(--ink2);max-width:34em}
+.photos{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.photos button{flex:none;border:1px solid var(--line);border-radius:8px;padding:0;width:44px;height:58px;overflow:hidden;background:var(--surface)}
 .photos img{width:100%;height:100%;object-fit:cover;display:block}
+.photos .lbl{font-size:13px;color:var(--muted);margin-left:4px}
+.tips{background:var(--gold-pale);border-radius:16px;padding:18px 24px;display:flex;flex-direction:column;gap:6px}
+.tips h3{font-size:14px;font-weight:600;color:var(--gold-text);letter-spacing:.04em}
+.tips ul{color:#5C4310}
 ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 
 /* 步骤 */
-.step{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start}
-.num{width:34px;height:34px;border-radius:50%;background:var(--sun);display:grid;place-items:center;font-weight:700;font-size:17px}
-.step .body{min-width:0;display:flex;flex-direction:column;gap:10px}
-.step h2{line-height:34px}
-.say-line{font-size:19px;font-weight:600}
+.step{gap:18px}
+.step-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.step-n{font-size:13px;font-weight:600;color:var(--blue);letter-spacing:.08em;white-space:nowrap}
+.step h2{font-size:21px}
+.step .body{min-width:0;display:flex;flex-direction:column;gap:14px}
+.say-line{font-family:var(--serif);font-size:23px;font-weight:600;line-height:1.6;color:var(--ink)}
 .list-rows{display:flex;flex-direction:column}
-.list-rows>*{padding:14px 0;border-top:1px solid var(--line)}
-.list-rows>*:first-child{border-top:0;padding-top:0}
+.list-rows>*{padding:20px 0;border-top:1px solid var(--line)}
+.list-rows>*:first-child{border-top:0;padding-top:4px}
 .list-rows>*:last-child{padding-bottom:0}
 
-/* 字词一行 */
-.wd{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:start}
-.zi{display:flex;flex-direction:column;align-items:center;min-width:72px;background:var(--sky);border-radius:14px;padding:6px 10px}
-.zi .py{font-size:14px;color:var(--soft)}
-.zi b{font-weight:600;font-size:32px;line-height:1.2;letter-spacing:.04em}
-.wd .txt{display:flex;flex-direction:column;gap:4px;min-width:0}
-.wd .txt .k{color:var(--soft);font-size:14px;margin-right:8px}
-.tag{font-size:12px;color:var(--sun-deep);background:var(--sun-pale);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:2px;font-weight:600}
-.acts{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
-.mk{border:0;background:var(--sky);border-radius:999px;padding:5px 14px;font-size:14px;font-weight:600;color:var(--soft)}
-.mk[aria-pressed="true"].ok{background:var(--mint);color:#fff}
-.mk[aria-pressed="true"].no{background:var(--coral);color:#fff}
-.mk[aria-pressed="true"].mid{background:var(--sun);color:var(--ink)}
+/* 字词：楷体写进田字格 */
+.wd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 24px;align-items:start}
+.zi{display:flex;flex-direction:column;align-items:center;gap:4px}
+.zi .py{font-size:14px;color:var(--muted);letter-spacing:.04em}
+.tzs{display:flex}
+.tz{width:54px;height:54px;display:grid;place-items:center;font-family:var(--kai);font-weight:400;font-size:38px;line-height:1;color:var(--ink);border:1.5px solid var(--grid);margin-left:-1.5px;
+  background:linear-gradient(var(--grid),var(--grid)) center/100% 1px no-repeat,linear-gradient(90deg,var(--grid),var(--grid)) center/1px 100% no-repeat;background-color:var(--surface)}
+.tz:first-child{margin-left:0}
+.zi.long .tz{width:42px;height:42px;font-size:29px}
+.wd .txt{display:flex;flex-direction:column;gap:6px;min-width:0;padding-top:20px}
+.wd .txt p{font-size:17px}
+.wd .txt p+p{font-size:15px;color:var(--ink2)}
+.wd .txt .k{color:var(--muted);font-size:13px;margin-right:10px;font-weight:600}
+.tag{font-size:12px;color:var(--gold-text);background:var(--gold-pale);border-radius:6px;padding:1px 7px;margin-left:8px;vertical-align:2px;font-weight:600}
+.acts{display:flex;gap:8px;align-items:center;padding-top:22px}
+.mk{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 14px;font-size:14px;color:var(--ink2);white-space:nowrap}
+.mk.say{width:36px;height:36px;padding:0;display:grid;place-items:center;border-color:transparent;background:var(--blue-pale);color:var(--blue)}
+.mk.say svg{width:18px;height:18px}
+.mk[aria-pressed="true"].ok{background:var(--green-pale);border-color:var(--green-pale);color:var(--green);font-weight:600}
+.mk[aria-pressed="true"].no{background:var(--red-pale);border-color:var(--red-pale);color:var(--red);font-weight:600}
+.mk[aria-pressed="true"].mid{background:var(--gold-pale);border-color:var(--gold-pale);color:var(--gold-text);font-weight:600}
 
 /* 复述、题目 */
-.rt{display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
-.rt .lb{color:var(--soft);font-size:14px;min-width:4em;padding-top:3px}
-.rt .pr{font-size:17px}
-details.ans{display:inline-block;margin-right:16px}
-details.ans summary{list-style:none;cursor:pointer;color:#2F6FC0;font-size:14px}
+.rt{display:grid;grid-template-columns:5em minmax(0,1fr);gap:4px 16px}
+.rt .lb{color:var(--muted);font-size:14px;padding-top:3px}
+.pr{font-size:17px}
+details.ans{display:inline-block;margin:6px 18px 0 0}
+details.ans summary{list-style:none;cursor:pointer;color:var(--blue);font-size:14px;font-weight:600}
 details.ans summary::-webkit-details-marker{display:none}
+details.ans summary::after{content:" ›"}
 details.ans[open]{display:block}
-details.ans .a{margin-top:2px;font-size:16px;color:var(--ink);background:var(--sky);border-radius:10px;padding:6px 10px}
-.qq{display:flex;flex-direction:column;gap:6px}
-.qq .qt{font-size:18px;font-weight:600}
-.qq .k{font-size:13px;color:var(--soft)}
+details.ans[open] summary::after{content:" ⌄"}
+details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--blue-pale);border-radius:10px;padding:10px 14px}
+.qq{display:flex;flex-direction:column;gap:8px}
+.qq .k{font-size:13px;color:var(--muted);font-weight:600}
+.qq .qt{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1.6}
+.qq .row{gap:8px;margin-top:4px}
 
 /* 读完 */
-.donebtn{border:0;border-radius:18px;padding:14px;font-size:18px;font-weight:700;background:var(--mint);color:#fff;box-shadow:0 5px 0 #138A5C}
-.donebtn:active{transform:translateY(4px);box-shadow:none}
-.donebtn.on{background:var(--mint-pale);color:var(--mint);box-shadow:0 5px 0 var(--mint)}
+.donebtn{border:0;border-radius:14px;padding:16px;font-size:18px;font-weight:600;background:var(--gold);color:var(--gold-ink)}
+.donebtn:active{transform:scale(.99)}
+.donebtn.on{background:var(--green-pale);color:var(--green)}
 
-/* 收藏：神兽、人物 */
-.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.coll{background:var(--sky);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-.coll .nm{font-size:19px;font-weight:700}
-.coll .nm small{font-size:13px;font-weight:400;color:var(--soft);margin-left:6px}
-.coll dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:15px}
-.coll dt{color:var(--soft)}
+/* 神兽、人物 */
+.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.coll{background:var(--sunk);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.coll .nm{font-family:var(--serif);font-size:20px;font-weight:700}
+.coll .nm small{font-family:var(--sans);font-size:13px;font-weight:400;color:var(--muted);margin-left:8px}
+.coll dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:15px}
+.coll dt{color:var(--muted)}
 .coll dd{margin:0}
-.coll .pic{border-radius:10px;overflow:hidden;background:var(--white);aspect-ratio:4/3;display:grid;place-items:center;color:var(--soft);font-size:14px;margin-top:4px}
+.coll .pic{border-radius:10px;overflow:hidden;background:var(--surface);border:1px dashed var(--line);aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;color:var(--muted);font-size:14px;margin-top:6px}
 .coll .pic img{width:100%;height:100%;object-fit:cover}
 
 /* 积累本 */
-.nums{display:flex;flex-wrap:wrap;gap:8px 28px;background:var(--white);border-radius:22px;padding:16px 20px;box-shadow:0 5px 0 var(--line)}
-.nums div{display:flex;align-items:baseline;gap:6px}
-.nums b{font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.nums span{color:var(--soft);font-size:14px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.wc{border:0;background:var(--sky);border-radius:12px;padding:5px 12px;display:flex;flex-direction:column;align-items:center;line-height:1.3}
-.wc .py{font-size:12px;color:var(--soft)}
-.wc b{font-size:22px;font-weight:600}
-.wc small{font-size:11px;color:var(--soft)}
-.wc.no{background:var(--coral-pale)}
-.empty{color:var(--soft);font-size:15px}
+.nums{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--surface);border-radius:20px;padding:24px 8px;box-shadow:var(--shadow)}
+.nums div{display:flex;flex-direction:column;align-items:center;gap:4px;border-left:1px solid var(--line)}
+.nums div:first-child{border-left:0}
+.nums b{font-size:32px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.nums span{color:var(--muted);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.wc{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;line-height:1.3;min-width:64px}
+.wc .py{font-size:12px;color:var(--muted)}
+.wc b{font-family:var(--kai);font-weight:400;font-size:28px}
+.wc small{font-size:11px;color:var(--muted)}
+.wc.no{background:var(--red-pale);border-color:var(--red-pale)}
 
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:15px;z-index:40;max-width:calc(100vw - 32px)}
-.lightbox{position:fixed;inset:0;z-index:50;background:rgba(31,43,87,.9);display:grid;place-items:center;padding:20px max(20px,env(safe-area-inset-right,0px)) 20px max(20px,env(safe-area-inset-left,0px))}
-.lightbox img{max-width:100%;max-height:calc(100vh - 40px);border-radius:10px}
-.status{text-align:center;font-size:13px;color:var(--soft)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:12px;padding:12px 20px;font-size:15px;z-index:40;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(27,36,53,.2)}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(18,24,36,.92);display:grid;place-items:center;padding:20px max(20px,env(safe-area-inset-right,0px)) 20px max(20px,env(safe-area-inset-left,0px))}
+.lightbox img{max-width:100%;max-height:calc(100vh - 40px);border-radius:8px}
+.status{text-align:center;font-size:13px;color:var(--muted)}
 
-@media (prefers-reduced-motion:reduce){.spin{animation:none}}
-@media (max-width:520px){.step{grid-template-columns:1fr}.step h2{line-height:1.4}.acts{grid-column:1/-1}.title h1{font-size:26px}}
-@media (min-width:820px){
-  .cards{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start}
-  .side{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding:2px 2px 8px}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.btn,.donebtn{transition:none}}
+@media (max-width:640px){
+  .block{padding:22px 20px;border-radius:18px}
+  .hero{padding:28px 20px}
+  .hero h2{font-size:28px}
+  .ch h1{font-size:32px}
+  .wd{grid-template-columns:minmax(0,1fr)}
+  .zi{align-items:flex-start}
+  .wd .txt,.acts{padding-top:0}
+  .rt{grid-template-columns:4em minmax(0,1fr)}
+  .nums{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}
+  .nums div:nth-child(4){border-left:0}
+}
+@media (min-width:900px){
+  .cards{display:grid;grid-template-columns:232px minmax(0,1fr);gap:40px;align-items:start}
+  .side{order:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding-top:14px}
+  .main{max-width:780px}
 }
 </style>
 
 <div class="wrap">
   <header class="top">
-    <h1>问问伴读</h1>
+    <h1 class="brand"><img src="icon.png" alt="">问问伴读</h1>
     <nav class="tabs" aria-label="页面">
       <button data-tab="cards" aria-pressed="true">伴读卡</button>
       <button data-tab="bank" aria-pressed="false">积累本</button>
@@ -190,10 +243,10 @@ details.ans .a{margin-top:2px;font-size:16px;color:var(--ink);background:var(--s
 
   <section id="v-cards" class="cards">
     <aside class="side">
-      <button class="newbtn" id="newBtn">＋ 准备新的一篇</button>
+      <div class="side-h"><span>往期伴读卡</span><button class="addbtn" id="newBtn">＋ 新的一篇</button></div>
       <div class="list" id="list"></div>
     </aside>
-    <div class="main" id="main"><div class="block"><p class="muted">正在打开记录本…</p></div></div>
+    <div class="main" id="main"><p class="muted">正在打开记录本…</p></div>
   </section>
 
   <section id="v-bank" class="main" hidden></section>
@@ -345,17 +398,16 @@ function sortedCards(){return Object.entries(S.cards).map(([id,c])=>({id,...c}))
 
 /* ---------------- 列表 ---------------- */
 function statusText(c){
-  if(c.status==="done")return`<span class="s ok">✓ 读完</span>`;
+  if(c.status==="done")return`<span class="s ok">✓ 已读</span>`;
   if(c.status==="generating")return`<span class="s">生成中</span>`;
-  if(c.status==="failed"&&!c.card)return`<span class="s">没生成</span>`;
+  if(c.status==="failed"&&!c.card)return`<span class="s bad">没生成</span>`;
   return`<span class="s"></span>`;
 }
 function renderList(){
   const cs=sortedCards();const show=S.showAll?cs:cs.slice(0,14);
   $("#list").innerHTML=show.length?show.map(c=>`<button class="item" data-id="${esc(c.id)}" aria-current="${S.view==="card"&&S.sel===c.id}">
-      <span class="d">${esc(dayLabel(c.date))}<br>${esc(c.date?weekday(c.date):"")}</span>
-      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}<small>${esc([c.book,c.mode,c.example?"示例":""].filter(Boolean).join(" · "))}</small></span>
-      ${statusText(c)}</button>`).join(""):`<div class="item"><span></span><span class="empty">还没有伴读卡</span><span></span></div>`;
+      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}</span>${statusText(c)}
+      <span class="d">${esc([dayLabel(c.date)+" "+(c.date?weekday(c.date):""),c.mode,c.example?"示例":""].filter(Boolean).join(" · "))}</span></button>`).join(""):`<p class="empty">还没有伴读卡</p>`;
   $("#list").insertAdjacentHTML("afterend","");
   const mb=$("#moreBtn");if(mb)mb.remove();
   if(cs.length>14)$("#list").insertAdjacentHTML("afterend",`<button class="more" id="moreBtn">${S.showAll?"收起":"看更早的 "+(cs.length-14)+" 篇"}</button>`);
@@ -372,20 +424,19 @@ const STYLE_HELP={"标准":"","画一画日":"小任务换成画下今天的神�
 function renderNew(){
   const d=S.draft||(S.draft=newDraft());
   const canGen=!!cap.sample&&cap.imgOK;
-  $("#main").innerHTML=`<div class="block">
-    <h2>准备新的一篇</h2>
-    <div class="field"><span>书页照片</span>
-      <label class="drop">＋ 拍照或选照片<small>标题那页也拍上，Claude 会自己认出题目。可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>
-      ${d.files.length?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}</div>`:""}
-    </div>
-    <div class="row" style="align-items:flex-start;gap:24px">
-      <div class="field"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div>
-      <div class="field"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div>
-    </div>
-    ${d.mode==="泛读"||STYLE_HELP[d.style]?`<p class="muted">${d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":""}${STYLE_HELP[d.style]}</p>`:""}
-    ${!cap.sample?`<div class="note">还没设置 Claude 钥匙。到上面「设置」里粘贴一次，这台设备以后就能生成伴读卡了。</div>`:""}
-    <div class="row"><button class="btn" id="genBtn" ${canGen?"":"disabled"}>生成伴读卡</button><span class="muted" id="genMsg"></span></div>
-  </div>`;
+  const has=d.files.length;
+  const cam=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.6A2.6 2.6 0 0 1 5.6 6h1.7l1.5-2.2h6.4L16.7 6h1.7A2.6 2.6 0 0 1 21 8.6v8.8a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 17.4z"/><circle cx="12" cy="12.8" r="3.7"/></svg>`;
+  const help=(d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":"")+STYLE_HELP[d.style];
+  $("#main").innerHTML=`<section class="block hero">
+    <div class="hero-t"><p class="eyebrow">${esc(dayLabel(today())+" · "+weekday(today()))}</p><h2>今天读哪一篇？</h2>
+      <p class="lead">拍下今天要读的书页，标题那页也拍上。Claude 会认出题目，写好伴读卡。</p></div>
+    ${has?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}<label class="addtile">＋ 再加一张<input type="file" id="f-files" accept="image/*" multiple></label></div>`
+      :`<label class="drop">${cam}<span>拍照或选照片</span><small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>`}
+    <div class="opts"><div class="opt"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div><div class="opt"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div></div>
+    ${help?`<p class="muted" style="margin-top:-12px">${help}</p>`:""}
+    ${!cap.sample?`<div class="note">这台设备还没设置 Claude 钥匙，到「设置」里粘贴一次就能生成了。</div>`:""}
+    <div class="gobar"><button class="btn big" id="genBtn" ${canGen&&has?"":"disabled"}>生成伴读卡</button><p class="muted" id="genMsg">${has?"":"先拍照，按钮就能点了"}</p></div>
+  </section>`;
 }
 $("#main").addEventListener("input",e=>{
   const d=S.draft;if(!d||S.view!=="new")return;
@@ -530,15 +581,16 @@ async function generate(){
 }
 
 /* ---------------- 卡片 ---------------- */
+const SPK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>`;
 function renderCard(id){
   const c=S.cards[id];if(!c){S.view="new";return renderNew()}
   const k=c.card;const m=c.marks||{};
   const metaParts=[dayLabel(c.date)+" "+(c.date?weekday(c.date):""),c.book,c.mode,c.style&&c.style!=="标准"?c.style:"",c.example?"示例卡":""].filter(Boolean);
-  const photos=arr(c.photos).length?`<div class="photos">${arr(c.photos).map((p,i)=>`<button data-photo="${esc(p)}" aria-label="看第 ${i+1} 页照片"><img data-ph="${esc(p)}" src="${blobUrl(p)}" alt=""></button>`).join("")}</div>`:"";
-  const title=`<div class="title"><div class="meta">${metaParts.map(x=>`<span>${esc(x)}</span>`).join("")}</div><h1>${esc(k?.title||"今天这一篇")}</h1>${k?.summary?`<p>${esc(k.summary)}</p>`:""}${photos}</div>`;
+  const photos=arr(c.photos).length?`<div class="photos">${arr(c.photos).map((p,i)=>`<button data-photo="${esc(p)}" aria-label="看第 ${i+1} 页照片"><img data-ph="${esc(p)}" src="${blobUrl(p)}" alt=""></button>`).join("")}<span class="lbl">原文 ${arr(c.photos).length} 页，点开看大图</span></div>`:"";
+  const title=`<header class="ch"><p class="eyebrow">${esc(metaParts.join(" · "))}</p><h1>${esc(k?.title||"今天这一篇")}</h1>${k?.summary?`<p class="sum">${esc(k.summary)}</p>`:""}${photos}</header>`;
 
   if(S.live[id]||(c.status==="generating"&&!k&&Date.now()-(c.createdAt||0)<8*60e3)){
-    $("#main").innerHTML=title+`<div class="block gen"><div class="spin"></div><h2>Claude 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</div>`;
+    $("#main").innerHTML=title+`<section class="block gen"><div class="spin"></div><h2>Claude 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</section>`;
     return;
   }
   if(!k){
@@ -547,20 +599,20 @@ function renderCard(id){
     return;
   }
   const B=[];let n=0;
-  const step=(h,body)=>`<div class="block step"><div class="num">${++n}</div><div class="body"><h2>${h}</h2>${body}</div></div>`;
+  const step=(h,body)=>`<section class="block step"><div class="step-h"><span class="step-n">第 ${++n} 步</span><h2>${h}</h2></div><div class="body">${body}</div></section>`;
   const ans=(label,txt)=>txt?`<details class="ans"><summary>${label}</summary><div class="a">${esc(txt)}</div></details>`:"";
 
   if(k.problems)B.push(`<div class="note">${esc(k.problems)}</div>`);
   if(c.error&&c.status!=="generating")B.push(`<div class="err">上次重新生成没成功：${esc(c.error)}</div>`);
-  if(k.tips.length)B.push(`<div class="block"><h2>先看一眼</h2><ul class="plain">${k.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`);
+  if(k.tips.length)B.push(`<div class="tips"><h3>读之前先看一眼</h3><ul class="plain">${k.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`);
 
   if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}`));
   B.push(step("一起读",`<p>你带读一句，问问跟读一句。</p>${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
-      <div class="zi"><span class="py">${esc(w.pinyin)}</span><b>${esc(w.word)}</b></div>
+      <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
       <div class="txt">${w.meaning?`<p>${esc(w.meaning)}${w.isIdiom?`<span class="tag">成语</span>`:""}</p>`:""}${w.play?`<p><span class="k">玩一玩</span>${esc(w.play)}</p>`:""}${w.link?`<p><span class="k">联系问问</span>${esc(w.link)}</p>`:""}</div>
-      <div class="acts"><button class="mk say" data-say="${esc(w.word)}" aria-label="读 ${esc(w.word)}">🔊</button><button class="mk ok" data-wm="${esc(w.word)}" data-v="ok" aria-pressed="${st==="ok"}">会了</button><button class="mk no" data-wm="${esc(w.word)}" data-v="stuck" aria-pressed="${st==="stuck"}">卡壳</button></div></div>`}).join("")}</div>`));
+      <div class="acts"><button class="mk say" data-say="${esc(w.word)}" aria-label="读 ${esc(w.word)}">${SPK}</button><button class="mk ok" data-wm="${esc(w.word)}" data-v="ok" aria-pressed="${st==="ok"}">会了</button><button class="mk no" data-wm="${esc(w.word)}" data-v="stuck" aria-pressed="${st==="stuck"}">卡壳</button></div></div>`}).join("")}</div>`));
 
   if(k.retell.items.length)B.push(step(k.retell.type==="神兽档案"?"说说神兽档案":"讲讲这个故事",`<p class="muted">你说前半句，问问接后半句。</p><div class="list-rows">${k.retell.items.map(s=>`<div class="rt"><span class="lb">${esc(s.label)}</span><div><p class="pr">${esc(s.prompt)}</p>${ans("看答案",s.answer)}</div></div>`).join("")}</div>`));
 
@@ -572,13 +624,13 @@ function renderCard(id){
   if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>`));
 
   B.push(step("读完了",`<label class="field"><span>今天卡壳的字（可不填）</span><input type="text" id="stuckChars" value="${esc(m.stuckChars||"")}" placeholder="比如：衔 填 淹"></label>
-    <button class="donebtn ${m.done?"on":""}" data-act="done">${m.done?"✓ 今天读完啦（点一下撤销）":"今天读完啦"}</button>`));
+    <button class="donebtn ${m.done?"on":""}" data-act="done">${m.done?"✓ 今天读完了（点一下撤销）":"今天读完啦"}</button>`));
 
   const coll=[];
   if(k.beasts.length)coll.push(`<div class="cols">${k.beasts.map((b,i)=>beastHTML(b,i===0?(m.drawing||""):undefined)).join("")}</div>`);
   if(k.people.length)coll.push(`<div class="cols">${k.people.map(personHTML).join("")}</div>`);
   if(k.task?.name)coll.push(`<p><b>小任务：${esc(k.task.name)}</b>　${esc(k.task.desc)}</p>${cap.assets?`<div class="row"><label class="btn light" style="position:relative">${m.drawing?"换一张作品":"拍下问问的作品"}<input type="file" id="drawFile" accept="image/*" style="position:absolute;inset:0;opacity:0;width:100%"></label></div>`:""}`);
-  if(coll.length)B.push(`<div class="block"><h2>收进积累本</h2>${coll.join("")}</div>`);
+  if(coll.length)B.push(`<section class="block"><h2>收进积累本</h2>${coll.join("")}</section>`);
 
   B.push(`<div class="row" style="justify-content:space-between;padding:0 4px">
     <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 Claude 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
@@ -666,10 +718,10 @@ function renderSet(){
   $("#v-set").innerHTML=`<div class="block"><h2>两把钥匙</h2><p class="muted">每台设备（iPad、电脑）各弄一次，以后不用再管。</p>
     <div class="field"><span>同步钥匙（GitHub）${ghKey()?"　✓ 已设置":""}</span>
       <p class="muted" style="margin:0">${ls.get("xdj:key","")&&!ls.get("wwbd:ghkey","")?"这台设备已经在用星星积分卡的同步钥匙，不用再贴。":"和星星积分卡用的是同一把，粘贴 github_pat_ 开头的那串。"}</p>
-      <div class="row"><input type="password" id="k-gh" autocomplete="off" placeholder="${ghKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 github_pat_…"}" style="flex:1 1 220px"><button class="btn light" id="k-gh-save">保存</button></div></div>
+      <div class="row field"><input type="password" id="k-gh" autocomplete="off" placeholder="${ghKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 github_pat_…"}" style="flex:1 1 220px"><button class="btn light" id="k-gh-save">保存</button></div></div>
     <div class="field"><span>Claude 钥匙${apiKey()?"　✓ 已设置":""}</span>
       <p class="muted" style="margin:0">在 console.anthropic.com 的 API Keys 里新建一把，粘贴 sk-ant- 开头的那串。只存在这台设备上。</p>
-      <div class="row"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-ant-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
+      <div class="row field"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-ant-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
     </div>
     <div class="block"><h2>关于问问</h2><p class="muted">Claude 写卡片时会参考这些。</p>
     <div class="row"><label class="field" style="flex:1 1 160px"><span>名字</span><input type="text" id="p-name" value="${esc(p.name||"问问")}"></label>
@@ -719,7 +771,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="fc1923901e";
+const BUILD="be2038ee89";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
