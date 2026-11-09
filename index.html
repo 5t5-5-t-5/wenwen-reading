@@ -434,7 +434,7 @@ function renderNew(){
       :`<label class="drop">${cam}<span>拍照或选照片</span><small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>`}
     <div class="opts"><div class="opt"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div><div class="opt"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div></div>
     ${help?`<p class="muted" style="margin-top:-12px">${help}</p>`:""}
-    ${!cap.sample?`<div class="note">这台设备还没设置 Claude 钥匙，到「设置」里粘贴一次就能生成了。</div>`:""}
+    ${!cap.sample?`<div class="note row" style="justify-content:space-between">这台设备还没设置 Claude 钥匙，粘贴一次就能生成了。<button class="btn light" data-goto="set">去设置</button></div>`:""}
     <div class="gobar"><button class="btn big" id="genBtn" ${canGen&&has?"":"disabled"}>生成伴读卡</button><p class="muted" id="genMsg">${has?"":"先拍照，按钮就能点了"}</p></div>
   </section>`;
 }
@@ -648,6 +648,7 @@ $("#main").addEventListener("click",async e=>{
   if(t.closest("[data-seg]")){const g=t.closest("[data-seg]").dataset.seg;S.draft[g]=t.dataset.v;renderNew();return}
   if(t.dataset.rm!==undefined){const f=S.draft.files.splice(+t.dataset.rm,1)[0];if(f)URL.revokeObjectURL(f.url);renderNew();return}
   if(t.id==="genBtn"){generate();return}
+  if(t.dataset.goto){document.querySelector(`[data-tab="${t.dataset.goto}"]`)?.click();window.scrollTo({top:0});return}
   if(t.dataset.photo){const pid=t.dataset.photo;$("#lbImg").src=blobUrl(pid);$("#lb").hidden=false;loadPhoto(pid).then(u=>{$("#lbImg").src=u}).catch(()=>{});return}
   if(t.dataset.say){say(t.dataset.say);return}
   const id=S.sel,c=S.cards[id];if(!c)return;
@@ -771,7 +772,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="be2038ee89";
+const BUILD="3fa655df41";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
