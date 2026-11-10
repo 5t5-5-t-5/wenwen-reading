@@ -188,6 +188,44 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
 .fig{display:flex;flex-direction:column;gap:8px}
 .fig .sub{font-size:15px;color:var(--ink2)}
 .guide{padding-left:1.4em;display:flex;flex-direction:column;gap:4px;color:var(--ink2);font-size:15px}
+.yw{display:flex;flex-direction:column;gap:22px}
+.yw .para{font-family:var(--kai);font-size:28px;font-weight:400;line-height:2.3;color:var(--ink);letter-spacing:.04em;text-indent:2em}
+.yw .para.cont{text-indent:0}
+.more{border-top:1px solid var(--line);padding-top:14px;margin-top:6px}
+.more>summary{cursor:pointer;color:var(--blue);font-size:15px;font-weight:600;list-style:none}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::before{content:"展开 ";color:var(--muted);font-weight:400}
+.more[open]>summary::before{content:"收起 "}
+.more>.list-rows{margin-top:10px}
+.yw ruby{ruby-position:over}
+.yw rt{font-family:var(--sans);font-size:12px;color:var(--muted);letter-spacing:0;font-weight:400}
+.yw mark{background:none;color:inherit;border-bottom:3px solid var(--grid);cursor:pointer;border-radius:2px}
+.yw mark:hover,.yw mark.on{background:var(--green-pale)}
+@media (max-width:640px){.yw .para{font-size:23px}}
+.hwtip{position:absolute;z-index:50;max-width:min(320px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(27,36,53,.14);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.hwtip .w{font-family:var(--kai);font-size:24px;line-height:1.2}
+.hwtip .w small{font-family:var(--sans);font-size:12px;color:var(--muted);margin-left:8px}
+.hwtip p{font-size:15px}
+.hwtip p.sub{color:var(--ink2);font-size:14px}
+.step,.phase,.ch{scroll-margin-top:16px}
+/* 右侧快速导航 */
+.toc{display:flex;flex-direction:column;gap:2px;z-index:30}
+.toc a{display:block;font-size:14px;line-height:1.3;color:var(--ink2);padding:7px 12px;border-radius:10px;text-decoration:none;white-space:nowrap}
+.toc a:hover{background:var(--blue-pale)}
+.toc a.on{color:var(--blue);background:var(--blue-pale);font-weight:600}
+.toc .g{font-size:12px;color:var(--muted);padding:12px 12px 2px;letter-spacing:.06em}
+.toc .g:first-child{padding-top:2px}
+.tocbtn{display:none}
+@media (min-width:900px){
+  #main:has(>.toc){padding-right:104px}
+  .toc{position:fixed;top:88px;right:max(12px,env(safe-area-inset-right,0px));width:96px;max-height:calc(100vh - 120px);overflow:auto}
+}
+@media (max-width:899px){
+  .toc{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(27,36,53,.16);padding:8px;max-height:65vh;overflow:auto;min-width:140px}
+  .toc:not(.open){display:none}
+  .tocbtn{display:flex;align-items:center;gap:6px;position:fixed;z-index:31;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(27,36,53,.14)}
+  .tocbtn svg{width:18px;height:18px}
+}
 .phase{padding:24px 4px 0;display:flex;flex-direction:column;gap:4px}
 .phase h3{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--ink)}
 .phase p{color:var(--muted);font-size:14px}
@@ -549,6 +587,7 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 4. ${fan?"泛读日不出题，questions 返回空数组。":"题目两到三道：“找一找”答案在原文里能指出来；“想一想”推理原因或生活里会怎样；“你怎么看”没有标准答案，鼓励说出不一样的看法。每道题配一句答不上来时家长可以给的提示。"}
 5. 复述：${fan?"泛读日 retell 的 items 返回空数组。":"神话或有情节的故事用“故事三步”（谁 → 发生了什么 → 结果怎样）；介绍神兽、怪物、地方的用“神兽档案”（叫什么、住在哪里、长什么样、有什么本领或特点）。prompt 是家长说的前半句，留空处用 ____，answer 是孩子该接的内容。"}
 6. 家长小贴士写给家长看，最多 2 条：怎么引导，碰到死亡、打仗、吃人、可怕的样子这类内容怎么温和地说，不回避也不渲染。
+6a. 原文 text：照片里的正文一字不差地抄下来，分段必须和书上的自然段完全一致，不能自己新分段；每段里再切成适合跟读的短句。每句写成 {"t":"句子","py":"拼音"}，py 一个汉字一个音节、空格隔开、带声调，照书上印的拼音抄。家长会对着它读给孩子跟读。
 7a. 难词 hardWords：原文里对一年级偏难的词都拿出来（一般 5–9 个），一句话解释并联系他的爱好或生活；how 从「读前先讲」（最多 2 个，不懂就读不明白的）「先让他猜」「读到时一句话」里选。
 7b. 选做：figures 挑 1–2 句原文里的比喻、拟人或“把……当成……”的想象句，写好在哪、2–3 步引导、家长示范句，没有就空数组；makeSentences 挑 1–2 个适合造句的词，写引导步骤（生活提问 → 给半句 → 完整复述不说错 → 换个说法）和参考句。
 7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
@@ -561,6 +600,7 @@ ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
  "title": "这篇的题目：照片里字号最大的那行字，原样照抄，不要改写",
  "kind": "神话故事" 或 "神兽档案" 或 "历史故事" 或 "其他",
  "summary": "给家长的一句话：这篇讲了什么",
+ "text": [[{"t": "第一段第一句。", "py": "dì yī duàn dì yī jù"}], [{"t": "第二段……", "py": "dì èr duàn"}]],
  "problems": "照片有问题时写，没有就写空字符串",
  "warmup": {"question": "读之前猜一猜的问题", "tip": "给家长的一句话"},
  "words": [{"word": "衔", "pinyin": "xián", "isIdiom": false, "meaning": "给孩子听的解释", "play": "演一演或比一比的玩法", "link": "联系他喜欢的东西或生活的一句话，可以为空"}],
@@ -580,7 +620,7 @@ ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
 }
 function clean(card){
   card=card&&typeof card==="object"&&!Array.isArray(card)?card:{};
-  for(const k of["words","questions","review","tips","beasts","people","examinerQuestions","hardWords","figures","makeSentences"])card[k]=arr(card[k]).filter(x=>x!=null);
+  for(const k of["words","questions","review","tips","beasts","people","examinerQuestions","hardWords","figures","makeSentences","text"])card[k]=arr(card[k]).filter(x=>x!=null);
   card.retell=card.retell&&typeof card.retell==="object"?card.retell:{type:"",items:[]};card.retell.items=arr(card.retell.items);
   card.warmup=card.warmup&&typeof card.warmup==="object"?card.warmup:null;
   card.task=card.task&&typeof card.task==="object"?card.task:null;
@@ -656,8 +696,27 @@ function renderCard(id){
 
   if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}`));
   const HOW={"读前先讲":"读前先讲","先让他猜":"先让他猜","读到时一句话":"读到时一句话"};
-  const hw=k.hardWords.filter(x=>x?.word);
-  B.push(step("一起读",`<p>你带读一句，问问跟读一句。</p>${hw.length?`<div><p class="muted" style="margin-bottom:6px">这些词对一年级有点难，按标签来：先讲、先让他猜，或者读到时说一句就往下读，别停太久。他主动问的，先夸一句“问得好”。</p><div class="list-rows">${hw.map(h=>`<div class="hw"><div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><div class="d">${h.how?`<span class="how">${esc(HOW[h.how]||h.how)}</span>`:""}<p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub"><span class="lbk">联系问问</span>${esc(h.link)}</p>`:""}</div></div>`).join("")}</div></div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+  const HOWN={"读前先讲":0,"先让他猜":1,"读到时一句话":2};
+  const hw=k.hardWords.filter(x=>x?.word).map((h,i)=>[h,i]).sort((a,b)=>((HOWN[a[0].how]??3)-(HOWN[b[0].how]??3))||a[1]-b[1]).map(x=>x[0]);
+  const hwList=hw.flatMap(h=>String(h.word).split(/[、，,]/)).map(w=>w.trim()).filter(Boolean).sort((a,b)=>b.length-a.length);
+  S.hwCur=hw;document.getElementById("hwTip")?.remove();tipFor=null;
+  const hwIdx=w=>hw.findIndex(h=>String(h.word).split(/[、，,]/).map(x=>x.trim()).includes(w));
+  const lineHTML=item=>{
+    const t=typeof item==="string"?item:String(item?.t||"");const chars=[...t];
+    const syl=typeof item==="object"&&item?.py?String(item.py).trim().split(/\s+/):[];
+    const isHan=ch=>/\p{Script=Han}/u.test(ch);const nHan=chars.filter(isHan).length;const usePy=syl.length===nHan;
+    const tag=new Array(chars.length).fill(-1);
+    for(const w of hwList){const wc=[...w];for(let i=0;i+wc.length<=chars.length;i++){if(wc.every((c,j)=>chars[i+j]===c)&&tag.slice(i,i+wc.length).every(x=>x<0)){for(let j=0;j<wc.length;j++)tag[i+j]=hwIdx(w)*1000+i}}}
+    let out="",k2=0,open=-1;
+    chars.forEach((ch,i)=>{
+      if(tag[i]!==open){if(open>=0)out+="</mark>";if(tag[i]>=0)out+=`<mark data-hw="${Math.floor(tag[i]/1000)}" tabindex="0" role="button">`;open=tag[i]}
+      if(isHan(ch)){const py=usePy?syl[k2]:"";k2++;out+=py?`<ruby>${esc(ch)}<rt>${esc(py)}</rt></ruby>`:esc(ch)}else out+=esc(ch)});
+    if(open>=0)out+="</mark>";return out};
+  const paras=arr(k.text).map(p=>Array.isArray(p)?p:[p]).filter(p=>p.length);
+  if(hw.length)B.push(step("难词，读之前看一眼",`<p class="muted" style="margin-bottom:6px">按标签来：先讲、先让他猜，或者读到时说一句就往下读，别停太久。他主动问的，先夸一句“问得好”。</p>${(()=>{const row=h=>`<div class="hw"><div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><div class="d">${h.how?`<span class="how">${esc(HOW[h.how]||h.how)}</span>`:""}<p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub"><span class="lbk">联系问问</span>${esc(h.link)}</p>`:""}</div></div>`;
+    const top=hw.slice(0,3),rest=hw.slice(3);
+    return `<div class="list-rows">${top.map(row).join("")}</div>${rest.length?`<details class="more"><summary>还有 ${rest.length} 个：${rest.map(h=>esc(h.word)).join("、")}</summary><div class="list-rows">${rest.map(row).join("")}</div></details>`:""}`})()}`));
+  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${paras.length?`<div class="yw">${paras.map(p=>{const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");return`<p class="para${/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
       <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
@@ -691,12 +750,63 @@ function renderCard(id){
   B.push(`<div class="row" style="justify-content:space-between;padding:0 4px">
     <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 AI 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
     <button class="link red" data-act="del">删掉这一篇</button></div>`);
-  $("#main").innerHTML=title+B.join("");
+  $("#main").innerHTML=title+B.join("")+tocHTML();
+  setupToc();
 }
 function beastHTML(b,drawing){return`<div class="coll"><div class="nm">${esc(b.name)}<small>${esc(b.pinyin)}</small></div>
   <dl>${b.home?`<dt>住在</dt><dd>${esc(b.home)}</dd>`:""}${b.look?`<dt>样子</dt><dd>${esc(b.look)}</dd>`:""}${b.power?`<dt>本领</dt><dd>${esc(b.power)}</dd>`:""}${b.compare?`<dt>比一比</dt><dd>${esc(b.compare)}</dd>`:""}</dl>
   ${drawing!==undefined?`<div class="pic">${drawing?`<img data-ph="${esc(drawing)}" src="${blobUrl(drawing)}" alt="问问画的${esc(b.name)}">`:"等问问来画"}</div>`:""}</div>`}
 function personHTML(p){return`<div class="coll"><div class="nm">${esc(p.name)}</div>${p.nick?`<p class="muted">${esc(p.nick)}</p>`:""}<p>${esc(p.trait)}</p></div>`}
+
+/* 右侧快速导航 */
+const TOC_SHORT={"读之前，问一句":"问一句","难词，读之前看一眼":"难词","一起读":"一起读","认字词":"认字词","说说神兽档案":"复述","讲讲这个故事":"复述","两道题":"问一问","问一问":"问一问","学书里的句子说一说":"学句子","用词说句子":"说句子","读完聊一句":"聊一句","小考官时间":"小考官","读完了":"读完了","收进积累本":"积累本"};
+const TOC_GROUP={"读完：先做这两步":"读完必做","有劲儿再玩":"有劲儿再玩"};
+function tocHTML(){return `<nav class="toc" id="toc" aria-label="快速导航"></nav><button class="tocbtn" id="tocBtn" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>目录</button>`}
+var tocSecs=[];
+function setupToc(){
+  const nav=document.getElementById("toc");if(!nav)return;
+  const items=[];tocSecs=[];let i=0;
+  const top=document.querySelector("#main .ch");if(top){top.id="sec-top";items.push(`<a href="#sec-top" data-sec="sec-top">开头</a>`);tocSecs.push(top)}
+  document.querySelectorAll("#main .step, #main .phase, #main section.block:not(.step)").forEach(el=>{
+    if(el.classList.contains("phase")){const t=el.querySelector("h3")?.textContent||"";items.push(`<div class="g">${esc(TOC_GROUP[t]||t)}</div>`);return}
+    const h=(el.querySelector(".step-h h2")||el.querySelector("h2"))?.textContent||"";if(!h)return;
+    const id="sec-"+(++i);el.id=id;tocSecs.push(el);items.push(`<a href="#${id}" data-sec="${id}">${esc(TOC_SHORT[h]||h)}</a>`)});
+  nav.innerHTML=items.join("");tocActive();
+}
+function tocActive(){
+  const nav=document.getElementById("toc");if(!nav||!tocSecs.length)return;
+  let cur=tocSecs[0];for(const el of tocSecs){if(el.getBoundingClientRect().top<=140)cur=el}
+  if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4)cur=tocSecs[tocSecs.length-1];
+  nav.querySelectorAll("a").forEach(a=>a.classList.toggle("on",a.dataset.sec===cur.id));
+}
+window.addEventListener("scroll",tocActive,{passive:true});
+document.addEventListener("click",e=>{
+  const a=e.target.closest(".toc a[data-sec]");const nav=document.getElementById("toc"),btn=document.getElementById("tocBtn");
+  if(a){e.preventDefault();document.getElementById(a.dataset.sec)?.scrollIntoView({behavior:"smooth",block:"start"});nav?.classList.remove("open");btn?.setAttribute("aria-expanded","false");return}
+  if(e.target.closest("#tocBtn")){const o=!nav.classList.contains("open");nav.classList.toggle("open",o);btn.setAttribute("aria-expanded",String(o));return}
+  if(nav?.classList.contains("open")&&!e.target.closest("#toc")){nav.classList.remove("open");btn?.setAttribute("aria-expanded","false")}
+});
+
+/* 点画线的难词，弹出解释 */
+var tipFor=null;
+function hideTip(){const t=document.getElementById("hwTip");if(t)t.remove();document.querySelectorAll(".yw mark.on").forEach(m=>m.classList.remove("on"));tipFor=null}
+function showTip(m){
+  const h=(S.hwCur||[])[+m.dataset.hw];if(!h){return}
+  if(tipFor===m)return;hideTip();tipFor=m;m.classList.add("on");
+  const d=document.createElement("div");d.id="hwTip";d.className="hwtip";d.setAttribute("role","tooltip");
+  d.innerHTML=`<div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub">${esc(h.link)}</p>`:""}`;
+  document.body.appendChild(d);
+  const r=m.getBoundingClientRect(),w=d.offsetWidth,hh=d.offsetHeight;
+  let x=r.left+window.scrollX+r.width/2-w/2;x=Math.max(window.scrollX+16,Math.min(x,window.scrollX+document.documentElement.clientWidth-w-16));
+  let y=r.bottom+window.scrollY+8;if(r.bottom+hh+16>window.innerHeight&&r.top>hh+16)y=r.top+window.scrollY-hh-8;
+  d.style.left=x+"px";d.style.top=y+"px";
+}
+document.addEventListener("click",e=>{const m=e.target.closest(".yw mark[data-hw]");if(m){e.preventDefault();if(tipFor===m)hideTip();else showTip(m);return}if(!e.target.closest("#hwTip"))hideTip()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")hideTip();const m=e.target.closest?.(".yw mark[data-hw]");if(m&&(e.key==="Enter"||e.key===" ")){e.preventDefault();showTip(m)}});
+if(matchMedia("(hover:hover)").matches){
+  document.addEventListener("mouseover",e=>{const m=e.target.closest(".yw mark[data-hw]");if(m)showTip(m)});
+  document.addEventListener("mouseout",e=>{const m=e.target.closest(".yw mark[data-hw]");if(m&&!e.relatedTarget?.closest?.("#hwTip")&&e.relatedTarget?.closest?.(".yw mark[data-hw]")!==m)hideTip()});
+}
 
 let delArm=0;
 $("#main").addEventListener("click",async e=>{
@@ -828,7 +938,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="cd5dca0312";
+const BUILD="71e88ecb4d";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
