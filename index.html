@@ -208,6 +208,18 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
 .hwtip p{font-size:15px}
 .hwtip p.sub{color:var(--ink2);font-size:14px}
 .step,.phase,.ch{scroll-margin-top:16px}
+/* 录音 */
+.rec{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:6px}
+.recbtn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:14px;font-weight:600;cursor:pointer}
+.recbtn svg{width:16px;height:16px;flex:none}
+.recbtn.on{background:var(--red);border-color:var(--red);color:#fff}
+.recbtn.has{background:var(--blue-pale);border-color:var(--blue-pale);color:var(--blue)}
+.recbtn .t{font-weight:400;font-variant-numeric:tabular-nums}
+.recbtn .dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:recblink 1s steps(2) infinite}
+@keyframes recblink{50%{opacity:.2}}
+.rec .link{font-size:14px}
+.recall{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.recall .btn{display:inline-flex;align-items:center;gap:8px}.recall .btn svg{width:16px;height:16px}
 /* 右侧快速导航 */
 .toc{display:flex;flex-direction:column;gap:2px;z-index:30}
 .toc a{display:block;font-size:14px;line-height:1.3;color:var(--ink2);padding:7px 12px;border-radius:10px;text-decoration:none;white-space:nowrap}
@@ -362,6 +374,9 @@ const gh={
     throw "nogist"},
   async file(f){return f?(f.truncated?await (await fetch(f.raw_url,{cache:"no-store"})).text():f.content):""},
   async photo(id){const g=await this.api("/gists/"+id);return this.file(g.files["photo.txt"])},
+  async audio(id){const g=await this.api("/gists/"+id);return this.file(g.files["audio.txt"])},
+  async uploadAudio(blob){const u=await blobToDataURL(blob);
+    const g=await this.api("/gists",{method:"POST",body:JSON.stringify({description:"问问伴读录音",public:false,files:{"audio.txt":{content:u}}})});return g.id},
   async upload(blob){const u=await blobToDataURL(blob);
     const g=await this.api("/gists",{method:"POST",body:JSON.stringify({description:"问问伴读照片",public:false,files:{"photo.txt":{content:u}}})});
     PH[g.id]=u;return{id:g.id}},
@@ -694,7 +709,7 @@ function renderCard(id){
   if(c.error&&c.status!=="generating")B.push(`<div class="err">上次重新生成没成功：${esc(c.error)}</div>`);
   if(k.tips.length)B.push(`<div class="tips"><h3>读之前先看一眼</h3><ul class="plain">${k.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`);
 
-  if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}`));
+  if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}${recHTML("warmup","读前一问")}`));
   const HOW={"读前先讲":"读前先讲","先让他猜":"先让他猜","读到时一句话":"读到时一句话"};
   const HOWN={"读前先讲":0,"先让他猜":1,"读到时一句话":2};
   const hw=k.hardWords.filter(x=>x?.word).map((h,i)=>[h,i]).sort((a,b)=>((HOWN[a[0].how]??3)-(HOWN[b[0].how]??3))||a[1]-b[1]).map(x=>x[0]);
@@ -716,7 +731,7 @@ function renderCard(id){
   if(hw.length)B.push(step("难词，读之前看一眼",`<p class="muted" style="margin-bottom:6px">按标签来：先讲、先让他猜，或者读到时说一句就往下读，别停太久。他主动问的，先夸一句“问得好”。</p>${(()=>{const row=h=>`<div class="hw"><div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><div class="d">${h.how?`<span class="how">${esc(HOW[h.how]||h.how)}</span>`:""}<p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub"><span class="lbk">联系问问</span>${esc(h.link)}</p>`:""}</div></div>`;
     const top=hw.slice(0,3),rest=hw.slice(3);
     return `<div class="list-rows">${top.map(row).join("")}</div>${rest.length?`<details class="more"><summary>还有 ${rest.length} 个：${rest.map(h=>esc(h.word)).join("、")}</summary><div class="list-rows">${rest.map(row).join("")}</div></details>`:""}`})()}`));
-  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${paras.length?`<div class="yw">${paras.map(p=>{const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");return`<p class="para${/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${recHTML("read","一起读","录下一起读")}${paras.length?`<div class="yw">${paras.map(p=>{const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");return`<p class="para${/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
       <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
@@ -725,20 +740,20 @@ function renderCard(id){
 
   const must=k.retell.items.length||k.questions.length;
   if(must)B.push(`<div class="phase"><h3>读完：先做这两步</h3><p>5 分钟就够。累了、饿了，做完这两步就收，别硬撑。</p></div>`);
-  if(k.retell.items.length)B.push(step(k.retell.type==="神兽档案"?"说说神兽档案":"讲讲这个故事",`<p class="muted">你说前半句，问问接后半句。</p><div class="list-rows">${k.retell.items.map(s=>`<div class="rt"><span class="lb">${esc(s.label)}</span><div><p class="pr">${esc(s.prompt)}</p>${ans("看答案",s.answer)}</div></div>`).join("")}</div>`));
+  if(k.retell.items.length)B.push(step(k.retell.type==="神兽档案"?"说说神兽档案":"讲讲这个故事",`<p class="muted">你说前半句，问问接后半句。</p><div class="list-rows">${k.retell.items.map(s=>`<div class="rt"><span class="lb">${esc(s.label)}</span><div><p class="pr">${esc(s.prompt)}</p>${ans("看答案",s.answer)}</div></div>`).join("")}</div>${recHTML("retell","复述","录下问问的复述")}`));
 
   if(k.questions.length)B.push(step(k.questions.length===2?"两道题":"问一问",`<div class="list-rows">${k.questions.map((q,i)=>{const st=m.q?.["q"+i]||"";return`<div class="qq"><span class="k">${esc(q.type||"")}</span><p class="qt">${esc(q.q)}</p><div>${ans("提示",q.hint)}${ans("参考答案",q.answer)}</div>
-      <div class="row" style="gap:6px"><button class="mk ok" data-qm="q${i}" data-v="yes" aria-pressed="${st==="yes"}">自己答出</button><button class="mk mid" data-qm="q${i}" data-v="hint" aria-pressed="${st==="hint"}">提示后答出</button><button class="mk no" data-qm="q${i}" data-v="no" aria-pressed="${st==="no"}">还不会</button></div></div>`}).join("")}</div>`));
+      <div class="row" style="gap:6px"><button class="mk ok" data-qm="q${i}" data-v="yes" aria-pressed="${st==="yes"}">自己答出</button><button class="mk mid" data-qm="q${i}" data-v="hint" aria-pressed="${st==="hint"}">提示后答出</button><button class="mk no" data-qm="q${i}" data-v="no" aria-pressed="${st==="no"}">还不会</button></div>${recHTML("q"+i,"第"+(i+1)+"题·"+(q.type||""))}</div>`}).join("")}</div>`));
 
   const figs=k.figures.filter(x=>x?.sentence),mks=k.makeSentences.filter(x=>x?.word);
   if(figs.length||mks.length||k.chat)B.push(`<div class="phase"><h3>有劲儿再玩</h3><p>选做。状态好再挑一两个，不用全做。</p></div>`);
-  if(figs.length)B.push(step("学书里的句子说一说",`<div class="list-rows">${figs.map(f=>`<div class="fig">${f.kind?`<span class="how">${esc(f.kind)}</span>`:""}<p class="say-line">“${esc(f.sentence)}”</p>${f.explain?`<p class="sub"><span class="lbk">好在哪</span>${esc(f.explain)}</p>`:""}${arr(f.guide).length?`<ol class="guide">${arr(f.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("你先示范一句",f.example)}</div>`).join("")}</div>`));
-  if(mks.length)B.push(step("用词说句子",`<div class="list-rows">${mks.map(x=>`<div class="fig"><p><b style="font-family:var(--kai);font-size:24px;font-weight:400">${esc(x.word)}</b></p>${arr(x.guide).length?`<ol class="guide">${arr(x.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("参考句子",x.example)}</div>`).join("")}</div>`));
-  if(k.chat)B.push(step("读完聊一句",`<p class="say-line">“${esc(k.chat)}”</p>`));
+  if(figs.length)B.push(step("学书里的句子说一说",`<div class="list-rows">${figs.map((f,fi)=>`<div class="fig">${f.kind?`<span class="how">${esc(f.kind)}</span>`:""}<p class="say-line">“${esc(f.sentence)}”</p>${f.explain?`<p class="sub"><span class="lbk">好在哪</span>${esc(f.explain)}</p>`:""}${arr(f.guide).length?`<ol class="guide">${arr(f.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("你先示范一句",f.example)}${recHTML("fig"+fi,"学句子"+(fi+1))}</div>`).join("")}</div>`));
+  if(mks.length)B.push(step("用词说句子",`<div class="list-rows">${mks.map((x,xi)=>`<div class="fig"><p><b style="font-family:var(--kai);font-size:24px;font-weight:400">${esc(x.word)}</b></p>${arr(x.guide).length?`<ol class="guide">${arr(x.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("参考句子",x.example)}${recHTML("mk"+xi,"说句子·"+x.word)}</div>`).join("")}</div>`));
+  if(k.chat)B.push(step("读完聊一句",`<p class="say-line">“${esc(k.chat)}”</p>${recHTML("chat","聊一句")}`));
   const ex=k.examinerQuestions.filter(x=>x.q);
-  if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>`));
+  if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>${recHTML("exam","小考官")}`));
 
-  B.push(step("读完了",`<label class="field"><span>今天卡壳的字（可不填）</span><input type="text" id="stuckChars" value="${esc(m.stuckChars||"")}" placeholder="比如：衔 填 淹"></label>
+  B.push(step("读完了",`<div class="recall" id="recAll"></div><label class="field"><span>今天卡壳的字（可不填）</span><input type="text" id="stuckChars" value="${esc(m.stuckChars||"")}" placeholder="比如：衔 填 淹"></label>
     <button class="donebtn ${m.done?"on":""}" data-act="done">${m.done?"✓ 今天读完了（点一下撤销）":"今天读完啦"}</button>`));
 
   const coll=[];
@@ -751,12 +766,94 @@ function renderCard(id){
     <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 AI 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
     <button class="link red" data-act="del">删掉这一篇</button></div>`);
   $("#main").innerHTML=title+B.join("")+tocHTML();
-  setupToc();
+  setupToc();paintRecs();
 }
 function beastHTML(b,drawing){return`<div class="coll"><div class="nm">${esc(b.name)}<small>${esc(b.pinyin)}</small></div>
   <dl>${b.home?`<dt>住在</dt><dd>${esc(b.home)}</dd>`:""}${b.look?`<dt>样子</dt><dd>${esc(b.look)}</dd>`:""}${b.power?`<dt>本领</dt><dd>${esc(b.power)}</dd>`:""}${b.compare?`<dt>比一比</dt><dd>${esc(b.compare)}</dd>`:""}</dl>
   ${drawing!==undefined?`<div class="pic">${drawing?`<img data-ph="${esc(drawing)}" src="${blobUrl(drawing)}" alt="问问画的${esc(b.name)}">`:"等问问来画"}</div>`:""}</div>`}
 function personHTML(p){return`<div class="coll"><div class="nm">${esc(p.name)}</div>${p.nick?`<p class="muted">${esc(p.nick)}</p>`:""}<p>${esc(p.trait)}</p></div>`}
+
+/* ---------------- 录音：录下问问的回答，可以分享给爸爸、爷爷 ---------------- */
+const MIC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
+const PLAY=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>`;
+const PAUSE=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg>`;
+const REC={active:null,local:{},saving:{},blobs:{},player:null,playing:null,arm:{}};
+const recHTML=(key,label,txt)=>`<div class="rec" data-rec="${esc(key)}" data-label="${esc(label)}" data-txt="${esc(txt||"录下问问的回答")}"></div>`;
+const mmss=s=>Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");
+function recInfo(key){const c=S.cards[S.sel];return REC.local[S.sel+"|"+key]||c?.marks?.rec?.[key]||null}
+function paintRecs(){
+  const id=S.sel;
+  document.querySelectorAll("#main .rec[data-rec]").forEach(el=>{
+    const key=el.dataset.rec,full=id+"|"+key,info=recInfo(key);
+    if(REC.active?.full===full){el.innerHTML=`<button class="recbtn on" data-recact="stop" data-k="${esc(key)}"><span class="dot"></span>停止录音 <span class="t" data-rect>${mmss((Date.now()-REC.active.t0)/1000)}</span></button>`;return}
+    if(REC.saving[full]){el.innerHTML=`<span class="muted">正在保存录音…</span>`;return}
+    if(info){const pl=REC.playing===full;
+      el.innerHTML=`<button class="recbtn has" data-recact="play" data-k="${esc(key)}">${pl?PAUSE:PLAY}${pl?"暂停":"听一听"} <span class="t">${mmss(info.dur||0)}</span></button><button class="link" data-recact="share" data-k="${esc(key)}">分享</button><button class="link" data-recact="redo" data-k="${esc(key)}">${REC.arm[full]&&Date.now()-REC.arm[full]<4000?"再点一次就重录":"重录"}</button>${REC.local[full]?`<span class="muted" style="font-size:13px">没存到云上，只在这台设备</span>`:""}`;return}
+    el.innerHTML=`<button class="recbtn" data-recact="start" data-k="${esc(key)}">${MIC}${esc(el.dataset.txt)}</button>`;
+  });
+  const all=document.getElementById("recAll");
+  if(all){const n=document.querySelectorAll("#main .rec[data-rec]").length?[...document.querySelectorAll("#main .rec[data-rec]")].filter(el=>recInfo(el.dataset.rec)).length:0;
+    all.innerHTML=n?`<button class="btn light" data-recact="shareall">${MIC}分享今天的录音（${n} 段）</button><span class="muted" style="font-size:13px">可以发给爸爸、爷爷听</span>`:"";}
+}
+async function recBlob(key){
+  const full=S.sel+"|"+key,info=recInfo(key);if(!info)return null;
+  if(REC.local[full])return REC.local[full].blob;
+  if(REC.blobs[info.id])return REC.blobs[info.id];
+  const u=await gh.audio(info.id);const b=await (await fetch(u)).blob();REC.blobs[info.id]=b;return b;
+}
+function recFile(blob,key,label){const c=S.cards[S.sel];const ext=/mp4|m4a|aac/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
+  const nm=((c?.card?.title||"伴读")+"-"+(S.profile?.name||"问问")+"-"+label).replace(/[\\/:*?"<>|\s]+/g,"");return new File([blob],nm+"."+ext,{type:blob.type||"audio/mp4"})}
+async function shareFiles(files,title){
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title});return}}catch(e){if(e?.name==="AbortError")return}
+  for(const f of files){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
+  toast(files.length>1?"录音已下载，可以从下载里发出去":"录音已下载，可以从下载里发出去");
+}
+async function recStart(key){
+  if(REC.active){toast("先停掉正在录的那一段");return}
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){toast("这个浏览器不支持录音，用 iPad 上的 Safari 试试");return}
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){toast("没拿到麦克风权限，在弹窗里点“允许”");return}
+  const type=["audio/mp4;codecs=mp4a.40.2","audio/mp4","audio/webm;codecs=opus","audio/webm"].find(t=>MediaRecorder.isTypeSupported?.(t))||"";
+  let mr;try{mr=new MediaRecorder(stream,type?{mimeType:type,audioBitsPerSecond:48000}:{})}catch(e){mr=new MediaRecorder(stream)}
+  const chunks=[];mr.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data)};
+  const full=S.sel+"|"+key,cardId=S.sel;
+  REC.active={full,key,cardId,mr,stream,t0:Date.now(),chunks};
+  mr.onstop=()=>recSave(cardId,key,new Blob(chunks,{type:mr.mimeType||type||"audio/mp4"}),(Date.now()-REC.active.t0)/1000);
+  mr.start(1000);
+  REC.active.timer=setInterval(()=>{const t=document.querySelector("[data-rect]");const s=(Date.now()-REC.active.t0)/1000;if(t)t.textContent=mmss(s);if(s>300)recStop()},500);
+  paintRecs();
+}
+function recStop(){const a=REC.active;if(!a)return;clearInterval(a.timer);try{a.mr.stop()}catch(e){}a.stream.getTracks().forEach(t=>t.stop())}
+async function recSave(cardId,key,blob,dur){
+  const full=cardId+"|"+key;REC.active=null;
+  if(blob.size<800){paintRecs();toast("没录到声音，再试一次");return}
+  const old=S.cards[cardId]?.marks?.rec?.[key];
+  REC.saving[full]=1;paintRecs();
+  try{
+    if(!cap.assets)throw "nokey";
+    const gid=await gh.uploadAudio(blob);REC.blobs[gid]=blob;delete REC.local[full];
+    const info={id:gid,dur:Math.round(dur),type:blob.type,at:Date.now()};
+    const c=S.cards[cardId];if(c)c.marks=deepMerge(c.marks||{},{rec:{[key]:info}});
+    await updCard(cardId,{marks:{rec:{[key]:info}}});
+    if(old?.id&&old.id!==gid){try{await gh.del(old.id)}catch(e){}}
+    toast("录好了，已经存起来");
+  }catch(e){REC.local[full]={blob,dur:Math.round(dur),type:blob.type};toast(cap.assets?"录好了，但没存到云上，先别关页面":"录好了。设好同步钥匙才能存下来")}
+  delete REC.saving[full];if(S.sel===cardId)paintRecs();
+}
+async function recAction(t){
+  const act=t.dataset.recact,key=t.dataset.k,full=S.sel+"|"+key;
+  if(act==="start")return recStart(key);
+  if(act==="stop")return recStop();
+  if(act==="redo"){if(!(REC.arm[full]&&Date.now()-REC.arm[full]<4000)){REC.arm[full]=Date.now();paintRecs();setTimeout(paintRecs,4100);return}delete REC.arm[full];return recStart(key)}
+  if(act==="play"){
+    if(!REC.player){REC.player=new Audio();REC.player.onended=REC.player.onpause=()=>{REC.playing=null;paintRecs()}}
+    if(REC.playing===full){REC.player.pause();return}
+    try{t.disabled=true;const b=await recBlob(key);t.disabled=false;if(!b)return;REC.player.pause();if(REC.player.src)URL.revokeObjectURL(REC.player.src);REC.player.src=URL.createObjectURL(b);REC.playing=full;paintRecs();await REC.player.play()}catch(e){t.disabled=false;REC.playing=null;paintRecs();toast("这段录音没打开，检查一下网络")}
+    return}
+  if(act==="share"){const el=t.closest(".rec");try{const b=await recBlob(key);if(b)await shareFiles([recFile(b,key,el.dataset.label)],S.cards[S.sel]?.card?.title||"问问伴读")}catch(e){toast("录音没打开，检查一下网络")}return}
+  if(act==="shareall"){t.disabled=true;const files=[];
+    for(const el of document.querySelectorAll("#main .rec[data-rec]")){if(!recInfo(el.dataset.rec))continue;try{const b=await recBlob(el.dataset.rec);if(b)files.push(recFile(b,el.dataset.rec,el.dataset.label))}catch(e){}}
+    t.disabled=false;if(files.length)await shareFiles(files,(S.cards[S.sel]?.card?.title||"问问伴读")+" · "+(S.profile?.name||"问问")+"的录音");else toast("录音没打开，检查一下网络");return}
+}
 
 /* 右侧快速导航 */
 const TOC_SHORT={"读之前，问一句":"问一句","难词，读之前看一眼":"难词","一起读":"一起读","认字词":"认字词","说说神兽档案":"复述","讲讲这个故事":"复述","两道题":"问一问","问一问":"问一问","学书里的句子说一说":"学句子","用词说句子":"说句子","读完聊一句":"聊一句","小考官时间":"小考官","读完了":"读完了","收进积累本":"积累本"};
@@ -817,6 +914,7 @@ $("#main").addEventListener("click",async e=>{
   if(t.dataset.goto){document.querySelector(`[data-tab="${t.dataset.goto}"]`)?.click();window.scrollTo({top:0});return}
   if(t.dataset.photo){const pid=t.dataset.photo;$("#lbImg").src=blobUrl(pid);$("#lb").hidden=false;loadPhoto(pid).then(u=>{$("#lbImg").src=u}).catch(()=>{});return}
   if(t.dataset.say){say(t.dataset.say);return}
+  if(t.dataset.recact){recAction(t);return}
   const id=S.sel,c=S.cards[id];if(!c)return;
   if(t.dataset.wm){const cur=c.marks?.words?.[t.dataset.wm];const v=cur===t.dataset.v?"":t.dataset.v;
     c.marks=deepMerge(c.marks||{},{words:{[t.dataset.wm]:v}});renderCard(id);updCard(id,{marks:{words:{[t.dataset.wm]:v}}});return}
@@ -832,7 +930,7 @@ $("#main").addEventListener("click",async e=>{
     if(!c.card)await updCard(id,{status:"generating",createdAt:Date.now(),error:""});
     runSample(id,blobs,extra);return}
   if(act==="del"){if(Date.now()-delArm>4000){delArm=Date.now();t.textContent="再点一次就删掉（照片也会删）";return}
-    delArm=0;const ph=[...arr(c.photos),...(c.marks?.drawing?[c.marks.drawing]:[])];await delCard(id);
+    delArm=0;const ph=[...arr(c.photos),...(c.marks?.drawing?[c.marks.drawing]:[]),...Object.values(c.marks?.rec||{}).map(r=>r?.id).filter(Boolean)];await delCard(id);
     if(cap.assets)for(const p of ph){try{await cap.assets.delete(p)}catch(e){}}
     S.sel=null;S.view="new";toast("删掉了");renderList();renderMain();return}
 });
@@ -938,7 +1036,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="71e88ecb4d";
+const BUILD="5897340ca9";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
