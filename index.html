@@ -176,6 +176,21 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
 .qq .k{font-size:13px;color:var(--muted);font-weight:600}
 .qq .qt{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1.6}
 .qq .row{gap:8px;margin-top:4px}
+/* 难词、仿说、造句 */
+.hw{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:4px 16px;align-items:start}
+.hw .w{font-family:var(--kai);font-size:24px;line-height:1.3;color:var(--ink)}
+.hw .w small{display:block;font-family:var(--sans);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.hw .d{display:flex;flex-direction:column;gap:5px;min-width:0}
+.hw .d p{font-size:16px}
+.hw .d p.sub{font-size:15px;color:var(--ink2)}
+.how{font-size:12px;font-weight:600;color:var(--blue);background:var(--blue-pale);border-radius:6px;padding:1px 8px;align-self:flex-start}
+.lbk{color:var(--muted);font-size:13px;font-weight:600;margin-right:10px}
+.fig{display:flex;flex-direction:column;gap:8px}
+.fig .sub{font-size:15px;color:var(--ink2)}
+.guide{padding-left:1.4em;display:flex;flex-direction:column;gap:4px;color:var(--ink2);font-size:15px}
+.phase{padding:24px 4px 0;display:flex;flex-direction:column;gap:4px}
+.phase h3{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--ink)}
+.phase p{color:var(--muted);font-size:14px}
 
 /* 读完 */
 .donebtn{border:0;border-radius:14px;padding:16px;font-size:18px;font-weight:600;background:var(--gold);color:var(--gold-ink)}
@@ -362,8 +377,9 @@ function deepMerge(a,b){const o={...a};for(const k in b){o[k]=(b[k]&&typeof b[k]
 function updCard(id,patch){DB.put("cards",id,deepMerge(DB.data.cards[id]||{},patch));return Promise.resolve()}
 function delCard(id){DB.put("cards",id,null);return Promise.resolve()}
 
-/* ---------------- 请 Claude 写卡（用家长自己的 Claude 钥匙） ---------------- */
-const MODEL="claude-opus-5-5";
+/* ---------------- 请 AI 写卡（家长自己的钥匙：sk-ant- 开头用 Claude，其他 sk- 开头用 GPT） ---------------- */
+const MODEL="claude-opus-5-5",GPT_MODEL="gpt-5.5";
+const isClaudeKey=k=>/^sk-ant-/.test(k);
 const apiKey=()=>ls.get("wwbd:apikey","");
 const claudeAI={
   async json(prompt,{images=[],onText}={}){
@@ -390,8 +406,34 @@ const claudeAI={
     try{return JSON.parse(text.slice(a,z+1))}catch(e){throw{code:"invalid_json"}}
   }
 };
+const gptAI={
+  async json(prompt,{images=[],onText}={}){
+    const content=[];
+    for(const b of images)content.push({type:"image_url",image_url:{url:await blobToDataURL(b),detail:"high"}});
+    content.push({type:"text",text:prompt+"\n\n只输出一个 JSON 对象，不要别的文字。"});
+    let r;
+    try{r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey()},
+      body:JSON.stringify({model:GPT_MODEL,stream:true,reasoning_effort:"medium",response_format:{type:"json_object"},max_completion_tokens:32000,messages:[{role:"user",content}]})})}
+    catch(e){throw{code:"network"}}
+    if(!r.ok){let m="",t="";try{const j=await r.json();m=j?.error?.message||"";t=j?.error?.code||j?.error?.type||""}catch(e){}
+      throw{code:r.status===401?"bad_key":/insufficient_quota|billing/i.test(t+m)?"no_credit":r.status===429?"rate_limited":r.status>=500?"overloaded":/context|too large|too long|maximum/i.test(m)?"prompt_too_large":/image/i.test(m)?"image_rejected":"api",message:m}}
+    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",text="",fin="";
+    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
+      while((i=buf.indexOf("\n"))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith("data:"))continue;
+        const d=line.slice(5).trim();if(d==="[DONE]")continue;let ev;try{ev=JSON.parse(d)}catch(e){continue}
+        if(ev.error)throw{code:"api",message:ev.error.message};
+        const ch=ev.choices?.[0];if(!ch)continue;
+        if(ch.delta?.refusal)fin="refusal";
+        if(ch.delta?.content){text+=ch.delta.content;onText&&onText({text})}
+        if(ch.finish_reason)fin=fin||ch.finish_reason}}
+    if(fin==="refusal"||fin==="content_filter")throw{code:"refused"};
+    if(!text.trim())throw{code:"empty_completion"};
+    const a=text.indexOf("{"),z=text.lastIndexOf("}");if(a<0||z<a)throw{code:"invalid_json"};
+    try{return JSON.parse(text.slice(a,z+1))}catch(e){throw{code:"invalid_json"}}
+  }
+};
 function refreshCap(){
-  cap.sample=apiKey()?claudeAI:null;cap.imgOK=!!cap.sample;cap.imgMax=8;
+  const k=apiKey();cap.sample=k?(isClaudeKey(k)?claudeAI:gptAI):null;cap.imgOK=!!cap.sample;cap.imgMax=8;
   cap.assets=ghKey()?{upload:b=>gh.upload(b),delete:id=>gh.del(id)}:null;
 }
 function sortedCards(){return Object.entries(S.cards).map(([id,c])=>({id,...c})).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0))}
@@ -429,12 +471,12 @@ function renderNew(){
   const help=(d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":"")+STYLE_HELP[d.style];
   $("#main").innerHTML=`<section class="block hero">
     <div class="hero-t"><p class="eyebrow">${esc(dayLabel(today())+" · "+weekday(today()))}</p><h2>今天读哪一篇？</h2>
-      <p class="lead">拍下今天要读的书页，标题那页也拍上。Claude 会认出题目，写好伴读卡。</p></div>
+      <p class="lead">拍下今天要读的书页，标题那页也拍上。AI 会认出题目，写好伴读卡。</p></div>
     ${has?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}<label class="addtile">＋ 再加一张<input type="file" id="f-files" accept="image/*" multiple></label></div>`
       :`<label class="drop">${cam}<span>拍照或选照片</span><small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>`}
     <div class="opts"><div class="opt"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div><div class="opt"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div></div>
     ${help?`<p class="muted" style="margin-top:-12px">${help}</p>`:""}
-    ${!cap.sample?`<div class="note row" style="justify-content:space-between">这台设备还没设置 Claude 钥匙，粘贴一次就能生成了。<button class="btn light" data-goto="set">去设置</button></div>`:""}
+    ${!cap.sample?`<div class="note row" style="justify-content:space-between">这台设备还没设置 AI 钥匙，粘贴一次就能生成了。<button class="btn light" data-goto="set">去设置</button></div>`:""}
     <div class="gobar"><button class="btn big" id="genBtn" ${canGen&&has?"":"disabled"}>生成伴读卡</button><p class="muted" id="genMsg">${has?"":"先拍照，按钮就能点了"}</p></div>
   </section>`;
 }
@@ -500,12 +542,15 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 附上的照片是今天要读的书页，按顺序排列。先认真读懂照片上的文字。所有内容都以照片里的原文为准，不要编原文里没有的情节或说法。照片看不清、缺页或者不是书页时，写在 problems 里，能做多少做多少。
 
 【写作原则】
+0. 读完时孩子常常又饿又累。最要紧的是保住他的兴趣，其次让他说得完整准确，并鼓励他说出和别人不一样的看法。卡片要短。
 1. 解释不用词典定义。用动作（演一演）、比较（和他熟悉的东西比）、他自己的生活经历来讲，一两句话说清，家长可以直接念给 6 岁孩子听。每个字段都写短，一句话为主。
 2. ${fan?"泛读日不选认字词。":"认字词选 2–3 个，成语最多 1 个（原文里有才选）。优先选原文里常用、一年级能认的字词；课内正在学的字在原文里出现就优先选。神兽名、人名这类生僻字只听不认，不选进认字词。"}
 3. 自然地联系他喜欢的东西（比如三国人物、恐龙、海洋生物、动画里的角色），整张卡用两三处就够，不要每条都硬凑，联系不上就留空。
-4. ${fan?"泛读日不出题，questions 返回空数组。":"题目两道：第一道“找一找”，答案在原文里能指出来；第二道“想一想”，可以推理原因、猜心情或“如果是你”，没有唯一答案。每道题配一句答不上来时家长可以给的提示。"}
+4. ${fan?"泛读日不出题，questions 返回空数组。":"题目两到三道：“找一找”答案在原文里能指出来；“想一想”推理原因或生活里会怎样；“你怎么看”没有标准答案，鼓励说出不一样的看法。每道题配一句答不上来时家长可以给的提示。"}
 5. 复述：${fan?"泛读日 retell 的 items 返回空数组。":"神话或有情节的故事用“故事三步”（谁 → 发生了什么 → 结果怎样）；介绍神兽、怪物、地方的用“神兽档案”（叫什么、住在哪里、长什么样、有什么本领或特点）。prompt 是家长说的前半句，留空处用 ____，answer 是孩子该接的内容。"}
 6. 家长小贴士写给家长看，最多 2 条：怎么引导，碰到死亡、打仗、吃人、可怕的样子这类内容怎么温和地说，不回避也不渲染。
+7a. 难词 hardWords：原文里对一年级偏难的词都拿出来（一般 5–9 个），一句话解释并联系他的爱好或生活；how 从「读前先讲」（最多 2 个，不懂就读不明白的）「先让他猜」「读到时一句话」里选。
+7b. 选做：figures 挑 1–2 句原文里的比喻、拟人或“把……当成……”的想象句，写好在哪、2–3 步引导、家长示范句，没有就空数组；makeSentences 挑 1–2 个适合造句的词，写引导步骤（生活提问 → 给半句 → 完整复述不说错 → 换个说法）和参考句。
 7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
 8. 玩法：标准＝正常；画一画日＝小任务改成把今天的神兽或人物画下来，题目更轻松；小考官日＝在 examinerQuestions 里给 2–3 道让孩子考爸爸妈妈的题，附答案。其他玩法 examinerQuestions 返回空数组。
 9. 原文里出现神兽、怪物，就写进 beasts（每只一项）；出现三国或历史人物，就写进 people。没有就返回空数组。
@@ -527,18 +572,21 @@ ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
  "task": {"name": "小任务名", "desc": "怎么做，一两句"},
  "beasts": [{"name": "神兽名", "pinyin": "", "home": "住在哪里", "look": "长什么样", "power": "本领或特点", "compare": "和他熟悉的动物比一比"}],
  "people": [{"name": "人物名", "nick": "外号或身份", "trait": "一个特点，一句话"}],
- "examinerQuestions": [{"q": "", "answer": ""}]
+ "examinerQuestions": [{"q": "", "answer": ""}],
+ "hardWords": [{"word": "悬崖", "pinyin": "xuán yá", "how": "读前先讲", "meaning": "一句话解释", "link": "联系他的爱好或生活"}],
+ "figures": [{"kind": "比喻/拟人/想象", "sentence": "原文句子", "explain": "好在哪", "guide": ["步骤"], "example": "家长示范句"}],
+ "makeSentences": [{"word": "比较", "guide": ["步骤"], "example": "参考句子"}]
 }`;
 }
 function clean(card){
   card=card&&typeof card==="object"&&!Array.isArray(card)?card:{};
-  for(const k of["words","questions","review","tips","beasts","people","examinerQuestions"])card[k]=arr(card[k]).filter(x=>x!=null);
+  for(const k of["words","questions","review","tips","beasts","people","examinerQuestions","hardWords","figures","makeSentences"])card[k]=arr(card[k]).filter(x=>x!=null);
   card.retell=card.retell&&typeof card.retell==="object"?card.retell:{type:"",items:[]};card.retell.items=arr(card.retell.items);
   card.warmup=card.warmup&&typeof card.warmup==="object"?card.warmup:null;
   card.task=card.task&&typeof card.task==="object"?card.task:null;
   return card;
 }
-const ERR={bad_key:"Claude 钥匙不对或失效了，去「设置」里重新粘贴。",no_credit:"Claude 账户的余额用完了，去 console.anthropic.com 充值后再试。",overloaded:"Claude 现在太忙，过一两分钟点“再试一次”。",network:"没连上网，连上后点“再试一次”。",api:"Claude 那边出了点问题，点“再试一次”。",rate_limited:"用得太频繁了，过一会儿再试。",image_rejected:"有照片读不了，换一张清楚的再试。",refused:"Claude 没法处理这些照片，换一下照片再试。",invalid_json:"Claude 写出来的格式不对，点“再试一次”。",empty_completion:"Claude 没写出内容，点“再试一次”。",prompt_too_large:"内容太多了，少放几张照片再试。"};
+const ERR={bad_key:"AI 钥匙不对或失效了，去「设置」里重新粘贴。",no_credit:"AI 账户的余额用完了，充值后再试。",overloaded:"AI 现在太忙，过一两分钟点“再试一次”。",network:"没连上网，连上后点“再试一次”。",api:"AI 那边出了点问题，点“再试一次”。",rate_limited:"用得太频繁了，过一会儿再试。",image_rejected:"有照片读不了，换一张清楚的再试。",refused:"AI 没法处理这些照片，换一下照片再试。",invalid_json:"AI 写出来的格式不对，点“再试一次”。",empty_completion:"AI 没写出内容，点“再试一次”。",prompt_too_large:"内容太多了，少放几张照片再试。"};
 const errMsg=e=>ERR[e?.code]||"网络或服务出了点问题，点“再试一次”。";
 
 async function runSample(id,blobs,extra){
@@ -590,7 +638,7 @@ function renderCard(id){
   const title=`<header class="ch"><p class="eyebrow">${esc(metaParts.join(" · "))}</p><h1>${esc(k?.title||"今天这一篇")}</h1>${k?.summary?`<p class="sum">${esc(k.summary)}</p>`:""}${photos}</header>`;
 
   if(S.live[id]||(c.status==="generating"&&!k&&Date.now()-(c.createdAt||0)<8*60e3)){
-    $("#main").innerHTML=title+`<section class="block gen"><div class="spin"></div><h2>Claude 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</section>`;
+    $("#main").innerHTML=title+`<section class="block gen"><div class="spin"></div><h2>AI 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</section>`;
     return;
   }
   if(!k){
@@ -607,18 +655,26 @@ function renderCard(id){
   if(k.tips.length)B.push(`<div class="tips"><h3>读之前先看一眼</h3><ul class="plain">${k.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`);
 
   if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}`));
-  B.push(step("一起读",`<p>你带读一句，问问跟读一句。</p>${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+  const HOW={"读前先讲":"读前先讲","先让他猜":"先让他猜","读到时一句话":"读到时一句话"};
+  const hw=k.hardWords.filter(x=>x?.word);
+  B.push(step("一起读",`<p>你带读一句，问问跟读一句。</p>${hw.length?`<div><p class="muted" style="margin-bottom:6px">这些词对一年级有点难，按标签来：先讲、先让他猜，或者读到时说一句就往下读，别停太久。他主动问的，先夸一句“问得好”。</p><div class="list-rows">${hw.map(h=>`<div class="hw"><div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><div class="d">${h.how?`<span class="how">${esc(HOW[h.how]||h.how)}</span>`:""}<p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub"><span class="lbk">联系问问</span>${esc(h.link)}</p>`:""}</div></div>`).join("")}</div></div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
       <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
       <div class="txt">${w.meaning?`<p>${esc(w.meaning)}${w.isIdiom?`<span class="tag">成语</span>`:""}</p>`:""}${w.play?`<p><span class="k">玩一玩</span>${esc(w.play)}</p>`:""}${w.link?`<p><span class="k">联系问问</span>${esc(w.link)}</p>`:""}</div>
       <div class="acts"><button class="mk say" data-say="${esc(w.word)}" aria-label="读 ${esc(w.word)}">${SPK}</button><button class="mk ok" data-wm="${esc(w.word)}" data-v="ok" aria-pressed="${st==="ok"}">会了</button><button class="mk no" data-wm="${esc(w.word)}" data-v="stuck" aria-pressed="${st==="stuck"}">卡壳</button></div></div>`}).join("")}</div>`));
 
+  const must=k.retell.items.length||k.questions.length;
+  if(must)B.push(`<div class="phase"><h3>读完：先做这两步</h3><p>5 分钟就够。累了、饿了，做完这两步就收，别硬撑。</p></div>`);
   if(k.retell.items.length)B.push(step(k.retell.type==="神兽档案"?"说说神兽档案":"讲讲这个故事",`<p class="muted">你说前半句，问问接后半句。</p><div class="list-rows">${k.retell.items.map(s=>`<div class="rt"><span class="lb">${esc(s.label)}</span><div><p class="pr">${esc(s.prompt)}</p>${ans("看答案",s.answer)}</div></div>`).join("")}</div>`));
 
-  if(k.questions.length)B.push(step("两道题",`<div class="list-rows">${k.questions.map((q,i)=>{const st=m.q?.["q"+i]||"";return`<div class="qq"><span class="k">${esc(q.type||"")}</span><p class="qt">${esc(q.q)}</p><div>${ans("提示",q.hint)}${ans("参考答案",q.answer)}</div>
+  if(k.questions.length)B.push(step(k.questions.length===2?"两道题":"问一问",`<div class="list-rows">${k.questions.map((q,i)=>{const st=m.q?.["q"+i]||"";return`<div class="qq"><span class="k">${esc(q.type||"")}</span><p class="qt">${esc(q.q)}</p><div>${ans("提示",q.hint)}${ans("参考答案",q.answer)}</div>
       <div class="row" style="gap:6px"><button class="mk ok" data-qm="q${i}" data-v="yes" aria-pressed="${st==="yes"}">自己答出</button><button class="mk mid" data-qm="q${i}" data-v="hint" aria-pressed="${st==="hint"}">提示后答出</button><button class="mk no" data-qm="q${i}" data-v="no" aria-pressed="${st==="no"}">还不会</button></div></div>`}).join("")}</div>`));
 
+  const figs=k.figures.filter(x=>x?.sentence),mks=k.makeSentences.filter(x=>x?.word);
+  if(figs.length||mks.length||k.chat)B.push(`<div class="phase"><h3>有劲儿再玩</h3><p>选做。状态好再挑一两个，不用全做。</p></div>`);
+  if(figs.length)B.push(step("学书里的句子说一说",`<div class="list-rows">${figs.map(f=>`<div class="fig">${f.kind?`<span class="how">${esc(f.kind)}</span>`:""}<p class="say-line">“${esc(f.sentence)}”</p>${f.explain?`<p class="sub"><span class="lbk">好在哪</span>${esc(f.explain)}</p>`:""}${arr(f.guide).length?`<ol class="guide">${arr(f.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("你先示范一句",f.example)}</div>`).join("")}</div>`));
+  if(mks.length)B.push(step("用词说句子",`<div class="list-rows">${mks.map(x=>`<div class="fig"><p><b style="font-family:var(--kai);font-size:24px;font-weight:400">${esc(x.word)}</b></p>${arr(x.guide).length?`<ol class="guide">${arr(x.guide).map(g=>`<li>${esc(g)}</li>`).join("")}</ol>`:""}${ans("参考句子",x.example)}</div>`).join("")}</div>`));
   if(k.chat)B.push(step("读完聊一句",`<p class="say-line">“${esc(k.chat)}”</p>`));
   const ex=k.examinerQuestions.filter(x=>x.q);
   if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>`));
@@ -633,7 +689,7 @@ function renderCard(id){
   if(coll.length)B.push(`<section class="block"><h2>收进积累本</h2>${coll.join("")}</section>`);
 
   B.push(`<div class="row" style="justify-content:space-between;padding:0 4px">
-    <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 Claude 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
+    <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 AI 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
     <button class="link red" data-act="del">删掉这一篇</button></div>`);
   $("#main").innerHTML=title+B.join("");
 }
@@ -660,7 +716,7 @@ $("#main").addEventListener("click",async e=>{
   if(act==="done"){const v=!c.marks?.done;c.marks=deepMerge(c.marks||{},{done:v});c.status=v?"done":"ready";renderCard(id);renderList();
     updCard(id,{marks:{done:v},status:v?"done":"ready",doneAt:v?Date.now():0});if(v)toast("太棒了，问问今天又读完一篇！");return}
   if(act==="retry"||act==="redo"){
-    if(!cap.sample){toast("先在「设置」里粘贴 Claude 钥匙");return}
+    if(!cap.sample){toast("先在「设置」里粘贴 AI 钥匙");return}
     const extra=act==="redo"?($("#redoText")?.value||"").trim():"";
     const blobs=await photoBlobs(c);if(!blobs.length){toast("找不到这篇的照片，请重新准备一篇");return}
     if(!c.card)await updCard(id,{status:"generating",createdAt:Date.now(),error:""});
@@ -720,11 +776,11 @@ function renderSet(){
     <div class="field"><span>同步钥匙（GitHub）${ghKey()?"　✓ 已设置":""}</span>
       <p class="muted" style="margin:0">${ls.get("xdj:key","")&&!ls.get("wwbd:ghkey","")?"这台设备已经在用星星积分卡的同步钥匙，不用再贴。":"和星星积分卡用的是同一把，粘贴 github_pat_ 开头的那串。"}</p>
       <div class="row field"><input type="password" id="k-gh" autocomplete="off" placeholder="${ghKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 github_pat_…"}" style="flex:1 1 220px"><button class="btn light" id="k-gh-save">保存</button></div></div>
-    <div class="field"><span>Claude 钥匙${apiKey()?"　✓ 已设置":""}</span>
-      <p class="muted" style="margin:0">在 console.anthropic.com 的 API Keys 里新建一把，粘贴 sk-ant- 开头的那串。只存在这台设备上。</p>
-      <div class="row field"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-ant-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
+    <div class="field"><span>AI 钥匙${apiKey()?(isClaudeKey(apiKey())?"　✓ 已设置（Claude）":"　✓ 已设置（GPT）"):""}</span>
+      <p class="muted" style="margin:0">粘贴 OpenAI 的钥匙（sk- 开头），用 GPT 看照片写卡；也可以贴 Claude 的钥匙（sk-ant- 开头）。只存在这台设备上。</p>
+      <div class="row field"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
     </div>
-    <div class="block"><h2>关于问问</h2><p class="muted">Claude 写卡片时会参考这些。</p>
+    <div class="block"><h2>关于问问</h2><p class="muted">AI 写卡片时会参考这些。</p>
     <div class="row"><label class="field" style="flex:1 1 160px"><span>名字</span><input type="text" id="p-name" value="${esc(p.name||"问问")}"></label>
     <label class="field" style="flex:1 1 200px"><span>年级</span><select id="p-grade">${["小学一年级上学期","小学一年级下学期","小学二年级上学期","小学二年级下学期"].map(g=>`<option ${g===p.grade?"selected":""}>${g}</option>`).join("")}</select></label></div>
     <label class="field"><span>喜欢的东西</span><textarea id="p-likes" rows="5">${esc(p.likes||"")}</textarea></label>
@@ -732,15 +788,15 @@ function renderSet(){
     <label class="field"><span>常读的书（用逗号隔开）</span><input type="text" id="p-books" value="${esc((p.books||["山海经","三国演义"]).join("，"))}"></label>
     <div class="row"><button class="btn" id="p-save">保存</button></div></div>
         <div class="block"><h2>怎么用</h2><ul class="plain">
-      <li>提前点“准备新的一篇”，拍下要读的书页，Claude 会写好伴读卡。</li>
+      <li>提前点“准备新的一篇”，拍下要读的书页，AI 会写好伴读卡。</li>
       <li>卡片按步骤从上往下用就行。答案都折起来了，可以把 iPad 给问问一起看。</li>
       <li>读完点字词的“会了”或“卡壳”，最后点“今天读完啦”。卡壳的字会进积累本，以后再出现时会提醒你。</li>
-      <li>生成一篇伴读卡大约花几毛钱，从你的 Claude 账户余额里扣。</li>
+      <li>生成一篇伴读卡大约花几毛钱，从你那把钥匙的账户余额里扣。</li>
     </ul></div>`;
 }
 $("#v-set").addEventListener("click",async e=>{
   if(e.target.id==="k-gh-save"){const v=$("#k-gh").value.trim();if(!v)return;ls.set("wwbd:ghkey",v);ls.set("wwbd:gist",null);refreshCap();renderSet();toast("同步钥匙存好了");DB.sync();return}
-  if(e.target.id==="k-ai-save"){const v=$("#k-ai").value.trim();if(!v)return;if(!/^sk-ant-/.test(v)){toast("Claude 钥匙应该是 sk-ant- 开头的");return}ls.set("wwbd:apikey",v);refreshCap();renderSet();toast("Claude 钥匙存好了");return}
+  if(e.target.id==="k-ai-save"){const v=$("#k-ai").value.trim();if(!v)return;if(!/^sk-/.test(v)){toast("钥匙应该是 sk- 开头的");return}ls.set("wwbd:apikey",v);refreshCap();renderSet();toast(isClaudeKey(v)?"Claude 钥匙存好了":"GPT 钥匙存好了");return}
   if(e.target.id!=="p-save")return;
   const p={name:$("#p-name").value.trim()||"问问",grade:$("#p-grade").value,likes:$("#p-likes").value.trim(),inClass:$("#p-class").value.trim(),books:$("#p-books").value.split(/[,，、]/).map(s=>s.trim()).filter(Boolean)};
   S.profile=p;
@@ -772,7 +828,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="3fa655df41";
+const BUILD="cd5dca0312";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
