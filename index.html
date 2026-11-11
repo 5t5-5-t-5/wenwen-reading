@@ -191,6 +191,11 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
 .yw{display:flex;flex-direction:column;gap:22px}
 .yw .para{font-family:var(--kai);font-size:28px;font-weight:400;line-height:2.3;color:var(--ink);letter-spacing:.04em;text-indent:2em}
 .yw .para.cont{text-indent:0}
+.yw .para.src{text-indent:0;text-align:right;font-size:22px}
+.ywlab{align-self:flex-start;font-size:15px;font-weight:700;color:#fff;background:var(--blue);border-radius:999px;padding:2px 14px;margin-bottom:-10px;letter-spacing:.2em}
+.ywlab.yi{background:var(--red,#c0392b)}
+.ywlab.gs{background:var(--green,#2f8f5b)}
+.hwgroup{font-size:14px;font-weight:700;color:var(--ink2);margin:4px 0 2px}
 .more{border-top:1px solid var(--line);padding-top:14px;margin-top:6px}
 .more>summary{cursor:pointer;color:var(--blue);font-size:15px;font-weight:600;list-style:none}
 .more>summary::-webkit-details-marker{display:none}
@@ -602,8 +607,8 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 4. ${fan?"泛读日不出题，questions 返回空数组。":"题目两到三道：“找一找”答案在原文里能指出来；“想一想”推理原因或生活里会怎样；“你怎么看”没有标准答案，鼓励说出不一样的看法。每道题配一句答不上来时家长可以给的提示。"}
 5. 复述：${fan?"泛读日 retell 的 items 返回空数组。":"神话或有情节的故事用“故事三步”（谁 → 发生了什么 → 结果怎样）；介绍神兽、怪物、地方的用“神兽档案”（叫什么、住在哪里、长什么样、有什么本领或特点）。prompt 是家长说的前半句，留空处用 ____，answer 是孩子该接的内容。"}
 6. 家长小贴士写给家长看，最多 2 条：怎么引导，碰到死亡、打仗、吃人、可怕的样子这类内容怎么温和地说，不回避也不渲染。
-6a. 原文 text：照片里的正文一字不差地抄下来，分段必须和书上的自然段完全一致，不能自己新分段；每段里再切成适合跟读的短句。每句写成 {"t":"句子","py":"拼音"}，py 一个汉字一个音节、空格隔开、带声调，照书上印的拼音抄。家长会对着它读给孩子跟读。
-7a. 难词 hardWords：原文里对一年级偏难的词都拿出来（一般 5–9 个），一句话解释并联系他的爱好或生活；how 从「读前先讲」（最多 2 个，不懂就读不明白的）「先让他猜」「读到时一句话」里选。
+6a. 原文 text：照片里的正文一字不差地抄下来，分段必须和书上的自然段完全一致，不能自己新分段；每段里再切成适合跟读的短句。每句写成 {"t":"句子","py":"拼音"}，py 一个汉字一个音节、空格隔开、带声调，照书上印的拼音抄。家长会对着它读给孩子跟读。书上有古文「原文」和「译文」的，也要抄进 text，按书上的顺序放在前面：段的开头放一个 {"label":"原文"}（或 "译文"、"故事"）当小标题；出处那一行（如 ——《海外北经》）单独一段，写成 {"t":"——《海外北经》","py":"hǎi wài běi jīng","align":"right"}。
+7a. 难词 hardWords：原文里对一年级偏难的词都拿出来（一般 5–9 个），一句话解释并联系他的爱好或生活；how 从「读前先讲」（最多 2 个，不懂就读不明白的）「先让他猜」「读到时一句话」里选。原文、译文里的古文词（如 其、为人深目、一目、出处的篇名）也要放进 hardWords，how 写「古文」，用孩子能听懂的话解释，这些会单独一组全部显示。
 7b. 选做：figures 挑 1–2 句原文里的比喻、拟人或“把……当成……”的想象句，写好在哪、2–3 步引导、家长示范句，没有就空数组；makeSentences 挑 1–2 个适合造句的词，写引导步骤（生活提问 → 给半句 → 完整复述不说错 → 换个说法）和参考句。
 7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
 8. 玩法：标准＝正常；画一画日＝小任务改成把今天的神兽或人物画下来，题目更轻松；小考官日＝在 examinerQuestions 里给 2–3 道让孩子考爸爸妈妈的题，附答案。其他玩法 examinerQuestions 返回空数组。
@@ -711,7 +716,7 @@ function renderCard(id){
 
   if(k.warmup?.question)B.push(step("读之前，问一句",`<p class="say-line">“${esc(k.warmup.question)}”</p>${k.warmup.tip?`<p class="muted">${esc(k.warmup.tip)}</p>`:""}${recHTML("warmup","读前一问")}`));
   const HOW={"读前先讲":"读前先讲","先让他猜":"先让他猜","读到时一句话":"读到时一句话"};
-  const HOWN={"读前先讲":0,"先让他猜":1,"读到时一句话":2};
+  const HOWN={"古文":-1,"读前先讲":0,"先让他猜":1,"读到时一句话":2};
   const hw=k.hardWords.filter(x=>x?.word).map((h,i)=>[h,i]).sort((a,b)=>((HOWN[a[0].how]??3)-(HOWN[b[0].how]??3))||a[1]-b[1]).map(x=>x[0]);
   const hwList=hw.flatMap(h=>String(h.word).split(/[、，,]/)).map(w=>w.trim()).filter(Boolean).sort((a,b)=>b.length-a.length);
   S.hwCur=hw;document.getElementById("hwTip")?.remove();tipFor=null;
@@ -729,9 +734,9 @@ function renderCard(id){
     if(open>=0)out+="</mark>";return out};
   const paras=arr(k.text).map(p=>Array.isArray(p)?p:[p]).filter(p=>p.length);
   if(hw.length)B.push(step("难词，读之前看一眼",`<p class="muted" style="margin-bottom:6px">按标签来：先讲、先让他猜，或者读到时说一句就往下读，别停太久。他主动问的，先夸一句“问得好”。</p>${(()=>{const row=h=>`<div class="hw"><div class="w">${esc(h.word)}${h.pinyin?`<small>${esc(h.pinyin)}</small>`:""}</div><div class="d">${h.how?`<span class="how">${esc(HOW[h.how]||h.how)}</span>`:""}<p>${esc(h.meaning||"")}</p>${h.link?`<p class="sub"><span class="lbk">联系问问</span>${esc(h.link)}</p>`:""}</div></div>`;
-    const top=hw.slice(0,3),rest=hw.slice(3);
-    return `<div class="list-rows">${top.map(row).join("")}</div>${rest.length?`<details class="more"><summary>还有 ${rest.length} 个：${rest.map(h=>esc(h.word)).join("、")}</summary><div class="list-rows">${rest.map(row).join("")}</div></details>`:""}`})()}`));
-  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${recHTML("read","一起读","录下一起读")}${paras.length?`<div class="yw">${paras.map(p=>{const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");return`<p class="para${/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+    const gw=hw.filter(h=>h.how==="古文"),nw=hw.filter(h=>h.how!=="古文");const top=nw.slice(0,3),rest=nw.slice(3);
+    return `${gw.length?`<p class="hwgroup">古文里的词（读原文时讲，先给问问看）</p><div class="list-rows">${gw.map(row).join("")}</div>${nw.length?`<p class="hwgroup">故事里的词</p>`:""}`:""}<div class="list-rows">${top.map(row).join("")}</div>${rest.length?`<details class="more"><summary>还有 ${rest.length} 个：${rest.map(h=>esc(h.word)).join("、")}</summary><div class="list-rows">${rest.map(row).join("")}</div></details>`:""}`})()}`));
+  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${recHTML("read","一起读","录下一起读")}${paras.length?`<div class="yw">${paras.map(p0=>{const lab=p0.find(l=>l&&typeof l==="object"&&l.label&&!l.t);const p=p0.filter(l=>!(l&&typeof l==="object"&&l.label&&!l.t));const LC={"原文":"","译文":" yi","故事":" gs"};const head=lab?`<span class="ywlab${LC[lab.label]??" gs"}">${esc(lab.label)}</span>`:"";if(!p.length)return head;const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");const right=p.some(l=>l&&l.align==="right");return head+`<p class="para${right?" src":/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
       <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
@@ -1036,7 +1041,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="5897340ca9";
+const BUILD="48e8e67bcd";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
