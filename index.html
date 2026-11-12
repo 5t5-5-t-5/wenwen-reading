@@ -56,6 +56,7 @@ b,strong{font-weight:600}
 .item .d{grid-column:1/-1;font-size:13px;color:var(--muted);line-height:1.5}
 .item .s{font-size:12px;color:var(--muted);white-space:nowrap}
 .item .s.ok{color:var(--green);font-weight:600}
+.item .s.wait{color:var(--blue);font-weight:600}
 .item .s.bad{color:var(--red)}
 .more{border:0;background:none;color:var(--muted);font-size:14px;padding:8px 12px;text-align:left}
 .empty{color:var(--muted);font-size:15px}
@@ -97,9 +98,11 @@ b,strong{font-weight:600}
 .drop svg{width:46px;height:46px;margin-bottom:4px}
 .drop small{font-size:14px;font-weight:400;color:var(--muted)}
 .drop input,.addtile input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
-.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
 .thumb{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:#EEF2F7;max-width:100%}
+button.thumb{border:0;padding:0;width:100%;display:block}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{width:100%;height:100%;display:grid;place-items:center;padding:12px;text-align:center;color:var(--muted);font-size:13px;box-sizing:border-box}
 .thumb .no{position:absolute;left:8px;top:8px;background:rgba(27,36,53,.72);color:#fff;border-radius:999px;font-size:12px;line-height:20px;padding:0 8px}
 .thumb .x{position:absolute;right:6px;top:6px;border:0;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.94);color:var(--ink);font-size:14px;box-shadow:0 1px 3px rgba(27,36,53,.2)}
 .addtile{position:relative;aspect-ratio:3/4;max-width:100%;border:1.5px dashed var(--blue-line);border-radius:12px;background:var(--blue-pale);color:var(--blue);display:grid;place-items:center;font-size:15px;font-weight:600}
@@ -433,6 +436,7 @@ const DB={
   start(){
     this.sync();
     setInterval(()=>{if(!document.hidden)this.sync()},30000);
+    setInterval(()=>{if(!document.hidden&&Object.values(S.cards).some(c=>c?.status==="uploaded"))this.sync()},10000);
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)this.sync()});
     addEventListener("online",()=>this.sync());
   }
@@ -506,6 +510,7 @@ function sortedCards(){return Object.entries(S.cards).map(([id,c])=>({id,...c}))
 /* ---------------- 列表 ---------------- */
 function statusText(c){
   if(c.status==="done")return`<span class="s ok">✓ 已读</span>`;
+  if(c.status==="uploaded"&&!c.card)return`<span class="s wait">待写卡</span>`;
   if(c.status==="generating")return`<span class="s">生成中</span>`;
   if(c.status==="failed"&&!c.card)return`<span class="s bad">没生成</span>`;
   return`<span class="s"></span>`;
@@ -513,7 +518,7 @@ function statusText(c){
 function renderList(){
   const cs=sortedCards();const show=S.showAll?cs:cs.slice(0,14);
   $("#list").innerHTML=show.length?show.map(c=>`<button class="item" data-id="${esc(c.id)}" aria-current="${S.view==="card"&&S.sel===c.id}">
-      <span class="t">${esc(c.card?.title||(c.status==="generating"?"正在生成…":"还没生成出来"))}</span>${statusText(c)}
+      <span class="t">${esc(c.card?.title||(c.status==="uploaded"?"等待电脑写卡":c.status==="generating"?"正在生成…":"还没生成出来"))}</span>${statusText(c)}
       <span class="d">${esc([dayLabel(c.date)+" "+(c.date?weekday(c.date):""),c.mode,c.example?"示例":""].filter(Boolean).join(" · "))}</span></button>`).join(""):`<p class="empty">还没有伴读卡</p>`;
   $("#list").insertAdjacentHTML("afterend","");
   const mb=$("#moreBtn");if(mb)mb.remove();
@@ -530,19 +535,21 @@ function segHTML(name,opts,val){return`<div class="seg" data-seg="${name}">${opt
 const STYLE_HELP={"标准":"","画一画日":"小任务换成画下今天的神兽或人物，题目更轻松。","小考官日":"多几道问问考爸爸妈妈的题。"};
 function renderNew(){
   const d=S.draft||(S.draft=newDraft());
+  const canUp=!!cap.assets;
   const canGen=!!cap.sample&&cap.imgOK;
   const has=d.files.length;
+  const loading=d.files.some(f=>f.loading);
   const cam=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.6A2.6 2.6 0 0 1 5.6 6h1.7l1.5-2.2h6.4L16.7 6h1.7A2.6 2.6 0 0 1 21 8.6v8.8a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 17.4z"/><circle cx="12" cy="12.8" r="3.7"/></svg>`;
   const help=(d.mode==="泛读"?"泛读不出题，只有一个读完聊的问题和人物卡。":"")+STYLE_HELP[d.style];
   $("#main").innerHTML=`<section class="block hero">
     <div class="hero-t"><p class="eyebrow">${esc(dayLabel(today())+" · "+weekday(today()))}</p><h2>今天读哪一篇？</h2>
-      <p class="lead">拍下今天要读的书页，标题那页也拍上。AI 会认出题目，写好伴读卡。</p></div>
-    ${has?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb"><img src="${f.url}" alt="第 ${i+1} 张"><span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}<label class="addtile">＋ 再加一张<input type="file" id="f-files" accept="image/*" multiple></label></div>`
+      <p class="lead">拍下今天要读的书页，标题那页也拍上。传上去后，电脑那边会自动写好伴读卡。</p></div>
+    ${has?`<div class="thumbs">${d.files.map((f,i)=>`<div class="thumb">${f.url?`<img src="${f.url}" alt="" data-prev="${i}" style="cursor:zoom-in">`:`<div class="ph">${f.loading?"正在打开…":"苹果原图<br>已选好"}</div>`}<span class="no">${i+1}</span><button type="button" class="x" data-rm="${i}" aria-label="去掉第 ${i+1} 张">✕</button></div>`).join("")}<label class="addtile">＋ 再加一张<input type="file" id="f-files" accept="image/*" multiple></label></div>`
       :`<label class="drop">${cam}<span>拍照或选照片</span><small>可以一次选几张，按页码顺序${cap.imgMax?"，最多 "+cap.imgMax+" 张":""}</small><input type="file" id="f-files" accept="image/*" multiple></label>`}
     <div class="opts"><div class="opt"><span>怎么读</span>${segHTML("mode",["精读","泛读"],d.mode)}</div><div class="opt"><span>玩法</span>${segHTML("style",["标准","画一画日","小考官日"],d.style)}</div></div>
     ${help?`<p class="muted" style="margin-top:-12px">${help}</p>`:""}
-    ${!cap.sample?`<div class="note row" style="justify-content:space-between">这台设备还没设置 AI 钥匙，粘贴一次就能生成了。<button class="btn light" data-goto="set">去设置</button></div>`:""}
-    <div class="gobar"><button class="btn big" id="genBtn" ${canGen&&has?"":"disabled"}>生成伴读卡</button><p class="muted" id="genMsg">${has?"":"先拍照，按钮就能点了"}</p></div>
+    ${!canUp?`<div class="note row" style="justify-content:space-between">这台设备还没设置同步钥匙，粘贴一次就能传照片了。<button class="btn light" data-goto="set">去设置</button></div>`:""}
+    <div class="gobar"><button class="btn big" id="upBtn" ${canUp&&has&&!loading?"":"disabled"}>${loading?"正在打开照片…":"传好照片，让电脑写卡"}</button><p class="muted" id="genMsg">${loading?"苹果照片转换中，等一两秒就好":has?(canUp?"传好后不用守着，电脑写完会自动显示在这里":"先点上面“去设置”贴好同步钥匙，就能传照片了"):(canUp?"先拍下今天要读的书页，按钮就能点了":"")}</p>${canGen&&has&&!loading?`<button type="button" class="link" id="genBtn" style="align-self:center">电脑不在身边？用这台设备的钥匙当场生成</button>`:""}</div>
   </section>`;
 }
 $("#main").addEventListener("input",e=>{
@@ -554,24 +561,56 @@ $("#main").addEventListener("input",e=>{
 $("#main").addEventListener("change",async e=>{
   if(e.target.id==="f-files"){
     const d=S.draft;const fs=[...e.target.files].filter(f=>/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
-    for(const f of fs)d.files.push({file:f,url:URL.createObjectURL(f)});
+    const items=fs.map(f=>({file:f,url:"",loading:true}));
+    d.files.push(...items);
     if(cap.imgMax&&d.files.length>cap.imgMax)toast("一次最多 "+cap.imgMax+" 张，多出来的请分两篇");
     renderNew();
+    for(const it of items){
+      if(!d.files.includes(it))continue;
+      const r=await prepareFile(it.file);
+      if(!d.files.includes(it)){if(r.url)URL.revokeObjectURL(r.url);continue}
+      it.file=r.file;it.url=r.url;it.loading=false;
+      if(S.view==="new")renderNew();
+    }
   }
+  if(e.target.id==="moreFiles"){appendPhotos(e.target.files)}
   if(e.target.id==="stuckChars"){updCard(S.sel,{marks:{stuckChars:e.target.value.trim()}})}
   if(e.target.id==="drawFile"){uploadDrawing(e.target.files[0])}
 });
 
+/* 苹果 HEIC 照片在电脑 Chrome 里直接打不开：按需转成通用 JPEG */
+let heicWait=null;
+function loadHeicLib(){
+  if(window.HeicTo)return Promise.resolve(window.HeicTo);
+  return heicWait||(heicWait=new Promise((ok,no)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/heic-to@1.6.7/dist/iife/heic-to.js";
+    s.onload=()=>window.HeicTo?ok(window.HeicTo):no();
+    s.onerror=()=>{heicWait=null;no()};
+    document.head.appendChild(s);
+  }));
+}
+function canDecodeUrl(url){return new Promise(ok=>{const i=new Image();i.onload=()=>ok(true);i.onerror=()=>ok(false);i.src=url})}
+async function prepareFile(file){
+  const u0=URL.createObjectURL(file);
+  if(await canDecodeUrl(u0))return{file,url:u0};
+  URL.revokeObjectURL(u0);
+  try{const H=await loadHeicLib();const b=await H({blob:file,type:"image/jpeg",quality:.88});return{file:b,url:URL.createObjectURL(b)}}
+  catch(e){return{file,url:""}}
+}
+
 /* 压缩照片：长边 1800，JPEG */
 async function shrink(file){
+  let src=file;
   try{
-    const url=URL.createObjectURL(file);
+    let url=URL.createObjectURL(src);
+    if(!(await canDecodeUrl(url))){URL.revokeObjectURL(url);const H=await loadHeicLib();src=await H({blob:file,type:"image/jpeg",quality:.88});url=URL.createObjectURL(src)}
     const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
     const k=Math.min(1,1800/Math.max(img.naturalWidth,img.naturalHeight));
     const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
     c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
-    return await new Promise(ok=>c.toBlob(b=>ok(b||file),"image/jpeg",.86));
-  }catch(e){return file}
+    return await new Promise(ok=>c.toBlob(b=>ok(b||src),"image/jpeg",.86));
+  }catch(e){return src}
 }
 
 /* ---------------- 让 Claude 写卡 ---------------- */
@@ -675,11 +714,56 @@ async function runSample(id,blobs,extra){
 async function photoBlobs(c){
   const out=[];for(const pid of arr(c.photos)){try{const u=await loadPhoto(pid);out.push(await (await fetch(u)).blob())}catch(e){}}return out;
 }
+async function uploadOnly(){
+  const d=S.draft;const msg=$("#genMsg"),btn=$("#upBtn"),gbtn=$("#genBtn");
+  if(!d?.files.length){toast("先拍一下今天要读的书页");return}
+  if(!cap.assets){toast("请先在「设置」里粘贴同步钥匙");return}
+  const files=cap.imgMax?d.files.slice(0,cap.imgMax):d.files;
+  btn.disabled=true;if(gbtn)gbtn.disabled=true;
+  msg.textContent="正在整理照片…";
+  const blobs=[];for(const f of files)blobs.push(await shrink(f.file));
+  const photos=[];
+  for(let i=0;i<blobs.length;i++){
+    msg.textContent=`正在上传第 ${i+1}/${blobs.length} 页照片…`;
+    try{const r=await cap.assets.upload(blobs[i],{type:blobs[i].type||"image/jpeg"});photos.push(r.id)}catch(e){console.warn(e)}
+  }
+  if(!photos.length){
+    btn.disabled=false;if(gbtn)gbtn.disabled=false;
+    msg.textContent="照片没传上去，检查一下网络再试";
+    toast("照片上传失败，请检查网络");
+    return;
+  }
+  if(photos.length<blobs.length)toast(`只传上了 ${photos.length}/${blobs.length} 页，漏掉的可以补拍`);
+  const date=today(),now=Date.now(),id=date+"-"+now.toString(36);
+  const doc={date,book:"",mode:d.mode,style:d.style,note:"",photos,status:"uploaded",createdAt:now,marks:{words:{},q:{},stuckChars:"",done:false}};
+  await setCard(id,doc);
+  if(!S.cards[id])S.cards[id]=doc;
+  d.files.forEach(f=>URL.revokeObjectURL(f.url));S.draft=null;
+  S.sel=id;S.view="card";renderList();renderMain();
+  toast("照片传好了！电脑写完会自动显示");
+}
+async function appendPhotos(fileList){
+  const id=S.sel,c=S.cards[id];if(!c||!cap.assets||!fileList?.length)return;
+  const fs=[...fileList].filter(f=>/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+  if(!fs.length)return;
+  const room=cap.imgMax?Math.max(0,cap.imgMax-arr(c.photos).length):fs.length;
+  if(!room){toast("最多只能放 "+cap.imgMax+" 页照片");return}
+  toast("正在补传书页…");
+  const added=[];
+  for(const f of fs.slice(0,room)){
+    try{const b=await shrink(f);const r=await cap.assets.upload(b,{type:b.type||"image/jpeg"});added.push(r.id)}catch(e){console.warn(e)}
+  }
+  if(!added.length){toast("没传上去，检查一下网络再试");return}
+  const next=[...arr(c.photos),...added];
+  c.photos=next;renderCard(id);
+  await updCard(id,{photos:next});
+  toast(`补传了 ${added.length} 页书页`);
+}
 async function generate(){
-  const d=S.draft;const msg=$("#genMsg"),btn=$("#genBtn");
+  const d=S.draft;const msg=$("#genMsg"),btn=$("#genBtn"),ubtn=$("#upBtn");
   if(!d.files.length){toast("先拍一下今天要读的书页");return}
   const files=cap.imgMax?d.files.slice(0,cap.imgMax):d.files;
-  btn.disabled=true;msg.textContent="正在整理照片…";
+  if(btn)btn.disabled=true;if(ubtn)ubtn.disabled=true;msg.textContent="正在整理照片…";
   const blobs=[];for(const f of files)blobs.push(await shrink(f.file));
   const photos=[];
   if(cap.assets){msg.textContent="正在保存照片…";
@@ -707,6 +791,15 @@ function renderCard(id){
 
   if(S.live[id]||(c.status==="generating"&&!k&&Date.now()-(c.createdAt||0)<8*60e3)){
     $("#main").innerHTML=title+`<section class="block gen"><div class="spin"></div><h2>AI 正在看照片写卡片</h2><p class="muted" id="genChars">${S.live[id]?"一般要一两分钟":"在另一台设备上生成中，好了会自动出现"}</p>${S.live[id]?"":`<button class="btn light" data-act="retry">在这台设备上重新生成</button>`}</section>`;
+    return;
+  }
+  if(c.status==="uploaded"&&!k){
+    const ps=arr(c.photos);
+    const canMore=cap.assets&&(!cap.imgMax||ps.length<cap.imgMax);
+    $("#main").innerHTML=`<header class="ch"><p class="eyebrow">${esc(metaParts.join(" · "))}</p><h1>照片已传好，等电脑写卡</h1><p class="sum">已传上 ${ps.length} 页书页。电脑那边写完后，这里会自动变成伴读卡，不用一直守着。</p></header>
+      <section class="block"><div class="thumbs">${ps.map((p,i)=>`<button type="button" class="thumb" data-photo="${esc(p)}" aria-label="点开看第 ${i+1} 页大图"><img data-ph="${esc(p)}" src="${blobUrl(p)}" alt=""><span class="no">第 ${i+1} 页</span></button>`).join("")}${canMore?`<label class="addtile">＋ 补拍一页<input type="file" id="moreFiles" accept="image/*" multiple></label>`:""}</div>
+      <p class="muted">点书页可放大检查字迹清不清楚；漏拍了可点“＋ 补拍一页”。</p>
+      <div class="row" style="justify-content:space-between"><div class="row"><button class="btn light" data-act="syncnow">刷新看看写好没</button>${cap.sample?`<button class="link" data-act="retry">不等电脑，用这台设备生成</button>`:""}</div><button class="link red" data-act="del">删掉这一篇</button></div></section>`;
     return;
   }
   if(!k){
@@ -921,9 +1014,11 @@ if(matchMedia("(hover:hover)").matches){
 
 let delArm=0;
 $("#main").addEventListener("click",async e=>{
-  const t=e.target.closest("button,[data-photo]");if(!t)return;
+  const t=e.target.closest("button,[data-photo],[data-prev]");if(!t)return;
   if(t.closest("[data-seg]")){const g=t.closest("[data-seg]").dataset.seg;S.draft[g]=t.dataset.v;renderNew();return}
-  if(t.dataset.rm!==undefined){const f=S.draft.files.splice(+t.dataset.rm,1)[0];if(f)URL.revokeObjectURL(f.url);renderNew();return}
+  if(t.dataset.rm!==undefined){const f=S.draft.files.splice(+t.dataset.rm,1)[0];if(f?.url)URL.revokeObjectURL(f.url);renderNew();return}
+  if(t.dataset.prev!==undefined){const u=S.draft?.files?.[+t.dataset.prev]?.url;if(u){$("#lbImg").src=u;$("#lb").hidden=false}return}
+  if(t.id==="upBtn"){uploadOnly();return}
   if(t.id==="genBtn"){generate();return}
   if(t.dataset.goto){document.querySelector(`[data-tab="${t.dataset.goto}"]`)?.click();window.scrollTo({top:0});return}
   if(t.dataset.photo){const pid=t.dataset.photo;$("#lbImg").src=blobUrl(pid);$("#lb").hidden=false;loadPhoto(pid).then(u=>{$("#lbImg").src=u}).catch(()=>{});return}
@@ -935,6 +1030,7 @@ $("#main").addEventListener("click",async e=>{
   if(t.dataset.qm){const cur=c.marks?.q?.[t.dataset.qm];const v=cur===t.dataset.v?"":t.dataset.v;
     c.marks=deepMerge(c.marks||{},{q:{[t.dataset.qm]:v}});renderCard(id);updCard(id,{marks:{q:{[t.dataset.qm]:v}}});return}
   const act=t.dataset.act;
+  if(act==="syncnow"){t.disabled=true;toast("正在检查电脑写好没…");await DB.sync();t.disabled=false;if(S.cards[id]&&!S.cards[id].card)toast("还在写，写完会自动显示");return}
   if(act==="done"){const v=!c.marks?.done;c.marks=deepMerge(c.marks||{},{done:v});c.status=v?"done":"ready";renderCard(id);renderList();
     updCard(id,{marks:{done:v},status:v?"done":"ready",doneAt:v?Date.now():0});if(v)toast("太棒了，问问今天又读完一篇！");return}
   if(act==="retry"||act==="redo"){
@@ -998,8 +1094,8 @@ function renderSet(){
     <div class="field"><span>同步钥匙（GitHub）${ghKey()?"　✓ 已设置":""}</span>
       <p class="muted" style="margin:0">${ls.get("xdj:key","")&&!ls.get("wwbd:ghkey","")?"这台设备已经在用星星积分卡的同步钥匙，不用再贴。":"和星星积分卡用的是同一把，粘贴 github_pat_ 开头的那串。"}</p>
       <div class="row field"><input type="password" id="k-gh" autocomplete="off" placeholder="${ghKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 github_pat_…"}" style="flex:1 1 220px"><button class="btn light" id="k-gh-save">保存</button></div></div>
-    <div class="field"><span>AI 钥匙${apiKey()?(isClaudeKey(apiKey())?"　✓ 已设置（Claude）":"　✓ 已设置（GPT）"):""}</span>
-      <p class="muted" style="margin:0">粘贴 OpenAI 的钥匙（sk- 开头），用 GPT 看照片写卡；也可以贴 Claude 的钥匙（sk-ant- 开头）。只存在这台设备上。</p>
+    <div class="field"><span>AI 钥匙（备用，可不填）${apiKey()?(isClaudeKey(apiKey())?"　✓ 已设置（Claude）":"　✓ 已设置（GPT）"):""}</span>
+      <p class="muted" style="margin:0">平时只传照片让电脑写卡不用填这把。出门没带电脑时，粘贴 OpenAI（sk- 开头）或 Claude（sk-ant- 开头）钥匙也能当场生成。</p>
       <div class="row field"><input type="password" id="k-ai" autocomplete="off" placeholder="${apiKey()?"已设置好（换钥匙才需要重新粘贴）":"粘贴 sk-…"}" style="flex:1 1 220px"><button class="btn light" id="k-ai-save">保存</button></div></div>
     </div>
     <div class="block"><h2>关于问问</h2><p class="muted">AI 写卡片时会参考这些。</p>
@@ -1010,10 +1106,10 @@ function renderSet(){
     <label class="field"><span>常读的书（用逗号隔开）</span><input type="text" id="p-books" value="${esc((p.books||["山海经","三国演义"]).join("，"))}"></label>
     <div class="row"><button class="btn" id="p-save">保存</button></div></div>
         <div class="block"><h2>怎么用</h2><ul class="plain">
-      <li>提前点“准备新的一篇”，拍下要读的书页，AI 会写好伴读卡。</li>
+      <li>点“＋ 新的一篇”，拍下要读的书页后点“传好照片，让电脑写卡”，电脑写好后这里会自动显示出来。</li>
       <li>卡片按步骤从上往下用就行。答案都折起来了，可以把 iPad 给问问一起看。</li>
       <li>读完点字词的“会了”或“卡壳”，最后点“今天读完啦”。卡壳的字会进积累本，以后再出现时会提醒你。</li>
-      <li>生成一篇伴读卡大约花几毛钱，从你那把钥匙的账户余额里扣。</li>
+      <li>如果电脑不在身边，设过备用钥匙的设备也能直接当场生成（一篇大约几毛钱）。</li>
     </ul></div>`;
 }
 $("#v-set").addEventListener("click",async e=>{
@@ -1050,13 +1146,15 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="ee2a237d57";
+const BUILD="e7121422c7";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
 (function init(){
   refreshCap();
-  const pull=()=>{const m={...DB.data.cards};for(const id in S.live)if(!m[id]&&S.cards[id])m[id]=S.cards[id];S.cards=m;S.profile=DB.data.settings.profile||null};
+  const pull=()=>{const wasWait=S.sel&&S.cards[S.sel]?.status==="uploaded"&&!S.cards[S.sel]?.card;
+    const m={...DB.data.cards};for(const id in S.live)if(!m[id]&&S.cards[id])m[id]=S.cards[id];S.cards=m;S.profile=DB.data.settings.profile||null;
+    if(wasWait&&S.cards[S.sel]?.card)toast("新伴读卡写好啦！")};
   pull();firstView();
   DB.subs.push(()=>{pull();if(S.loaded)onCardsChanged(null);if(S.tab==="set"&&document.activeElement?.closest?.("#v-set")==null)renderSet()});
   DB.start();
