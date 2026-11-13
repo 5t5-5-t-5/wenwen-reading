@@ -647,6 +647,7 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 
 【写作原则】
 0. 读完时孩子常常又饿又累。最要紧的是保住他的兴趣，其次让他说得完整准确，并鼓励他说出和别人不一样的看法。卡片要短。
+0a. 孩子最喜欢的写法：复述填空要短、答案是原文里一下能找到的一两个词（如“这个国家叫____国”“眼睛长在____上”）；题目要具体好玩、紧扣原文（如“想看身后的东西要怎么做”“用两只手抱大西瓜会碰到什么麻烦，可以怎么办”“眼睛长在手上和长在脸上，哪个更好，为什么”），不要讲道理的大问题；有古文时，古文小课第一个游戏用“其”出谜让他猜，谜底是他喜欢的东西（如“其首大，其臂短”→霸王龙，“其目大如球”→大王乌贼，“其发金，其力大”→悟空），猜完让他用“其”出题考家长。
 1. 解释不用词典定义。用动作（演一演）、比较（和他熟悉的东西比）、他自己的生活经历来讲，一两句话说清，家长可以直接念给 6 岁孩子听。每个字段都写短，一句话为主。
 2. ${fan?"泛读日不选认字词。":"认字词选 2–3 个，成语最多 1 个（原文里有才选）。优先选原文里常用、一年级能认的字词；课内正在学的字在原文里出现就优先选。神兽名、人名这类生僻字只听不认，不选进认字词。"}
 3. 自然地联系他喜欢的东西（比如三国人物、恐龙、海洋生物、动画里的角色），整张卡用两三处就够，不要每条都硬凑，联系不上就留空。
@@ -1146,7 +1147,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="e7121422c7";
+const BUILD="650a0aa23b";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
