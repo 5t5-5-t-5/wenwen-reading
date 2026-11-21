@@ -880,7 +880,7 @@ function personHTML(p){return`<div class="coll"><div class="nm">${esc(p.name)}</
 const MIC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
 const PLAY=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>`;
 const PAUSE=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg>`;
-const REC={active:null,local:{},saving:{},blobs:{},loading:{},player:null,playing:null,arm:{}};
+const REC={active:null,local:{},saving:{},blobs:{},loading:{},prog:{},want:null,player:null,playing:null,arm:{}};
 const recHTML=(key,label,txt)=>`<div class="rec" data-rec="${esc(key)}" data-label="${esc(label)}" data-txt="${esc(txt||"录下问问的回答")}"></div>`;
 const mmss=s=>Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");
 function recInfo(key){const c=S.cards[S.sel];return REC.local[S.sel+"|"+key]||c?.marks?.rec?.[key]||null}
@@ -891,7 +891,7 @@ function paintRecs(){
     if(REC.active?.full===full){el.innerHTML=`<button class="recbtn on" data-recact="stop" data-k="${esc(key)}"><span class="dot"></span>停止录音 <span class="t" data-rect>${mmss((Date.now()-REC.active.t0)/1000)}</span></button>`;return}
     if(REC.saving[full]){el.innerHTML=`<span class="muted">正在保存录音…</span>`;return}
     if(info){const pl=REC.playing===full,ready=!!(REC.local[full]||REC.blobs[info.id]);
-      el.innerHTML=`<button class="recbtn has" data-recact="play" data-k="${esc(key)}">${pl?PAUSE:PLAY}${pl?"暂停":ready?"听一听":"准备中…"} <span class="t">${mmss(info.dur||0)}</span></button><button class="link" data-recact="share" data-k="${esc(key)}">分享</button><button class="link" data-recact="redo" data-k="${esc(key)}">${REC.arm[full]&&Date.now()-REC.arm[full]<4000?"再点一次就重录":"重录"}</button>${REC.local[full]?`<span class="muted" style="font-size:13px">没存到云上，只在这台设备</span>`:""}`;return}
+      el.innerHTML=`<button class="recbtn has" data-recact="play" data-k="${esc(key)}">${pl?PAUSE:PLAY}${pl?"暂停":REC.want===full?`打开中 ${REC.prog[info.id]||0}%`:"听一听"} <span class="t">${mmss(info.dur||0)}</span></button><button class="link" data-recact="share" data-k="${esc(key)}">分享</button><button class="link" data-recact="redo" data-k="${esc(key)}">${REC.arm[full]&&Date.now()-REC.arm[full]<4000?"再点一次就重录":"重录"}</button>${REC.local[full]?`<span class="muted" style="font-size:13px">没存到云上，只在这台设备</span>`:""}`;return}
     el.innerHTML=`<button class="recbtn" data-recact="start" data-k="${esc(key)}">${MIC}${esc(el.dataset.txt)}</button>`;
   });
   const all=document.getElementById("recAll");
@@ -901,18 +901,36 @@ function paintRecs(){
 /* 录音存在云上，点的时候再下载会太慢：iPad 等下载完就不认这次点击了，不让播放、不让分享。
    所以打开卡片时就在后台先把录音下载好；点的时候直接用。 */
 function recReady(key){const full=S.sel+"|"+key,info=recInfo(key);if(!info)return null;return REC.local[full]?.blob||REC.blobs[info.id]||null}
-function recLoad(id){
+/* 下载过、录过的录音存在这台设备里（IndexedDB），下次打开不用再下载 */
+const AUD_DB={db:null,
+  open(){if(!this.db)this.db=new Promise((ok,no)=>{try{const r=indexedDB.open("wwbd-audio",1);r.onupgradeneeded=()=>r.result.createObjectStore("a");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});return this.db},
+  async get(id){try{const db=await this.open();return await new Promise(ok=>{const q=db.transaction("a").objectStore("a").get(id);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch(e){return null}},
+  async put(id,blob){try{const ab=await blob.arrayBuffer();const db=await this.open();db.transaction("a","readwrite").objectStore("a").put({ab,type:blob.type},id)}catch(e){}}};
+const SILENT="data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+function dataToBlob(s){const i=s.indexOf(","),head=s.slice(0,i);const bin=atob(s.slice(i+1).replace(/\s/g,""));const u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
+  return new Blob([u],{type:/webm/.test(head)?"audio/webm":/ogg/.test(head)?"audio/ogg":"audio/mp4"})}
+let recPaintT=0;function recPaintSoon(){if(recPaintT)return;recPaintT=setTimeout(()=>{recPaintT=0;paintRecs()},300)}
+async function audText(id,est){
+  let login=ls.get("wwbd:login","");
+  if(!login){try{login=(await gh.api("/user")).login;ls.set("wwbd:login",login)}catch(e){}}
+  if(login){try{const r=await fetch(`https://gist.githubusercontent.com/${login}/${id}/raw/audio.txt`);
+    if(r.ok){const tot=+r.headers.get("content-length")||est||0,rd=r.body?.getReader?.();if(!rd)return await r.text();
+      const parts=[];let got=0;for(;;){const{done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;if(tot){REC.prog[id]=Math.min(99,Math.round(got*100/tot));recPaintSoon()}}
+      return await new Blob(parts).text()}}catch(e){}}
+  return gh.audio(id)}
+function recLoad(id,dur){
   if(REC.blobs[id])return Promise.resolve(REC.blobs[id]);
-  if(!REC.loading[id])REC.loading[id]=Promise.race([
-    (async()=>{const u=await gh.audio(id);const b=await (await fetch(u)).blob();REC.blobs[id]=new Blob([b],{type:"audio/mp4"});return REC.blobs[id]})(),
-    new Promise((_,no)=>setTimeout(()=>no("timeout"),90000))
-  ]).finally(()=>{delete REC.loading[id]});
+  if(!REC.loading[id])REC.loading[id]=(async()=>{
+    const hit=await AUD_DB.get(id);if(hit?.ab)return REC.blobs[id]=new Blob([hit.ab],{type:hit.type||"audio/mp4"});
+    const txt=await Promise.race([audText(id,(dur||0)*6800),new Promise((_,no)=>setTimeout(()=>no("timeout"),180000))]);
+    const b=dataToBlob(txt);REC.blobs[id]=b;AUD_DB.put(id,b);return b})().finally(()=>{delete REC.loading[id];delete REC.prog[id]});
   return REC.loading[id]}
-async function recBlob(key){const r=recReady(key);if(r)return r;const info=recInfo(key);return info?recLoad(info.id):null}
+async function recBlob(key){const r=recReady(key);if(r)return r;const info=recInfo(key);return info?recLoad(info.id,info.dur):null}
 async function recPrefetch(){
   const id=S.sel,c=S.cards[id];const rec=c?.marks?.rec||{};
-  for(const k of Object.keys(rec)){if(S.sel!==id)return;const i=rec[k];if(!i?.id||REC.blobs[i.id])continue;
-    try{await recLoad(i.id)}catch(e){}if(S.sel===id)paintRecs()}
+  const q=Object.values(rec).filter(i=>i?.id&&!REC.blobs[i.id]).sort((a,b)=>(a.dur||0)-(b.dur||0));
+  const run=async()=>{while(q.length){if(S.sel!==id)return;const i=q.shift();try{await recLoad(i.id,i.dur)}catch(e){}}};
+  await Promise.all([run(),run()])
 }
 function recFile(blob,key,label){const c=S.cards[S.sel];const ext=/mp4|m4a|aac/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
   const nm=((c?.card?.title||"伴读")+"-"+(S.profile?.name||"问问")+"-"+label).replace(/[\\/:*?"<>|\s]+/g,"");return new File([blob],nm+"."+ext,{type:ext==="m4a"?"audio/mp4":(blob.type||"audio/mp4").split(";")[0]})}
@@ -943,7 +961,7 @@ async function recSave(cardId,key,blob,dur){
   REC.saving[full]=1;paintRecs();
   try{
     if(!cap.assets)throw "nokey";
-    const gid=await gh.uploadAudio(blob);REC.blobs[gid]=blob;delete REC.local[full];
+    const gid=await gh.uploadAudio(blob);REC.blobs[gid]=blob;AUD_DB.put(gid,blob);delete REC.local[full];
     const info={id:gid,dur:Math.round(dur),type:blob.type,at:Date.now()};
     const c=S.cards[cardId];if(c)c.marks=deepMerge(c.marks||{},{rec:{[key]:info}});
     await updCard(cardId,{marks:{rec:{[key]:info}}});
@@ -961,12 +979,16 @@ async function recAction(t){
     if(!REC.player){REC.player=new Audio();REC.player.onended=REC.player.onpause=()=>{REC.playing=null;paintRecs()}}
     if(REC.playing===full){REC.player.pause();return}
     const b=recReady(key);
-    if(!b){toast("录音还在下载，好了再点一次");try{await recBlob(key);paintRecs();toast("录音好了，再点一次“听一听”")}catch(e){paintRecs();toast("这段录音没下载下来，检查一下网络")}return}
+    if(!b){if(REC.want===full)return;REC.want=full;try{REC.player.src=SILENT;REC.player.play().catch(()=>{})}catch(e){}paintRecs();
+      try{const nb=await recBlob(key);if(REC.want!==full)return;REC.want=null;REC.player.src=URL.createObjectURL(nb);REC.playing=full;paintRecs();await REC.player.play()}
+      catch(e){if(REC.want===full)REC.want=null;REC.playing=null;paintRecs();toast(e==="timeout"?"网太慢，录音没下载下来":"没放出来，再点一次试试")}
+      return}
+    REC.want=null;
     REC.player.pause();if(REC.player.src)URL.revokeObjectURL(REC.player.src);REC.player.src=URL.createObjectURL(b);REC.playing=full;paintRecs();
     REC.player.play().catch(e=>{REC.playing=null;paintRecs();toast("没放出来，再点一次试试")});
     return}
   if(act==="share"){const el=t.closest(".rec");const b=recReady(key);
-    if(!b){toast("录音还在下载，好了再点一次");try{await recBlob(key);paintRecs();toast("录音好了，再点一次“分享”")}catch(e){toast("这段录音没下载下来，检查一下网络")}return}
+    if(!b){toast("录音正在下载，好了会提示你");try{await recBlob(key);toast("录音好了，再点一次“分享”")}catch(e){toast("这段录音没下载下来，检查一下网络")}return}
     shareFiles([recFile(b,key,el.dataset.label)],S.cards[S.sel]?.card?.title||"问问伴读");return}
   if(act==="shareall"){const els=[...document.querySelectorAll("#main .rec[data-rec]")].filter(el=>recInfo(el.dataset.rec));
     const miss=els.filter(el=>!recReady(el.dataset.rec));
@@ -1159,7 +1181,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="0e70b163ac";
+const BUILD="e8b1541d5e";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
