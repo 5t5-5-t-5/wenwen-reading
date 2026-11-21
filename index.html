@@ -869,7 +869,7 @@ function renderCard(id){
     <details class="redo" style="flex:1 1 300px"><summary class="link" style="display:inline">不满意？让 AI 重新写</summary><div class="field" style="margin-top:8px"><textarea id="redoText" placeholder="比如：题目再简单一点；多联系一下恐龙"></textarea><div class="row"><button class="btn light" data-act="redo" ${cap.sample&&arr(c.photos).length?"":"disabled"}>重新生成</button>${arr(c.photos).length?"":`<span class="muted">这篇没有存照片，没法重新生成</span>`}</div></div></details>
     <button class="link red" data-act="del">删掉这一篇</button></div>`);
   $("#main").innerHTML=title+B.join("")+tocHTML();
-  setupToc();paintRecs();
+  setupToc();paintRecs();recPrefetch();
 }
 function beastHTML(b,drawing){return`<div class="coll"><div class="nm">${esc(b.name)}<small>${esc(b.pinyin)}</small></div>
   <dl>${b.home?`<dt>住在</dt><dd>${esc(b.home)}</dd>`:""}${b.look?`<dt>样子</dt><dd>${esc(b.look)}</dd>`:""}${b.power?`<dt>本领</dt><dd>${esc(b.power)}</dd>`:""}${b.compare?`<dt>比一比</dt><dd>${esc(b.compare)}</dd>`:""}</dl>
@@ -880,7 +880,7 @@ function personHTML(p){return`<div class="coll"><div class="nm">${esc(p.name)}</
 const MIC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
 const PLAY=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>`;
 const PAUSE=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg>`;
-const REC={active:null,local:{},saving:{},blobs:{},player:null,playing:null,arm:{}};
+const REC={active:null,local:{},saving:{},blobs:{},loading:{},player:null,playing:null,arm:{}};
 const recHTML=(key,label,txt)=>`<div class="rec" data-rec="${esc(key)}" data-label="${esc(label)}" data-txt="${esc(txt||"录下问问的回答")}"></div>`;
 const mmss=s=>Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");
 function recInfo(key){const c=S.cards[S.sel];return REC.local[S.sel+"|"+key]||c?.marks?.rec?.[key]||null}
@@ -890,22 +890,32 @@ function paintRecs(){
     const key=el.dataset.rec,full=id+"|"+key,info=recInfo(key);
     if(REC.active?.full===full){el.innerHTML=`<button class="recbtn on" data-recact="stop" data-k="${esc(key)}"><span class="dot"></span>停止录音 <span class="t" data-rect>${mmss((Date.now()-REC.active.t0)/1000)}</span></button>`;return}
     if(REC.saving[full]){el.innerHTML=`<span class="muted">正在保存录音…</span>`;return}
-    if(info){const pl=REC.playing===full;
-      el.innerHTML=`<button class="recbtn has" data-recact="play" data-k="${esc(key)}">${pl?PAUSE:PLAY}${pl?"暂停":"听一听"} <span class="t">${mmss(info.dur||0)}</span></button><button class="link" data-recact="share" data-k="${esc(key)}">分享</button><button class="link" data-recact="redo" data-k="${esc(key)}">${REC.arm[full]&&Date.now()-REC.arm[full]<4000?"再点一次就重录":"重录"}</button>${REC.local[full]?`<span class="muted" style="font-size:13px">没存到云上，只在这台设备</span>`:""}`;return}
+    if(info){const pl=REC.playing===full,ready=!!(REC.local[full]||REC.blobs[info.id]);
+      el.innerHTML=`<button class="recbtn has" data-recact="play" data-k="${esc(key)}">${pl?PAUSE:PLAY}${pl?"暂停":ready?"听一听":"准备中…"} <span class="t">${mmss(info.dur||0)}</span></button><button class="link" data-recact="share" data-k="${esc(key)}">分享</button><button class="link" data-recact="redo" data-k="${esc(key)}">${REC.arm[full]&&Date.now()-REC.arm[full]<4000?"再点一次就重录":"重录"}</button>${REC.local[full]?`<span class="muted" style="font-size:13px">没存到云上，只在这台设备</span>`:""}`;return}
     el.innerHTML=`<button class="recbtn" data-recact="start" data-k="${esc(key)}">${MIC}${esc(el.dataset.txt)}</button>`;
   });
   const all=document.getElementById("recAll");
   if(all){const n=document.querySelectorAll("#main .rec[data-rec]").length?[...document.querySelectorAll("#main .rec[data-rec]")].filter(el=>recInfo(el.dataset.rec)).length:0;
     all.innerHTML=n?`<button class="btn light" data-recact="shareall">${MIC}分享今天的录音（${n} 段）</button><span class="muted" style="font-size:13px">可以发给爸爸、爷爷听</span>`:"";}
 }
-async function recBlob(key){
-  const full=S.sel+"|"+key,info=recInfo(key);if(!info)return null;
-  if(REC.local[full])return REC.local[full].blob;
-  if(REC.blobs[info.id])return REC.blobs[info.id];
-  const u=await gh.audio(info.id);const b=await (await fetch(u)).blob();REC.blobs[info.id]=b;return b;
+/* 录音存在云上，点的时候再下载会太慢：iPad 等下载完就不认这次点击了，不让播放、不让分享。
+   所以打开卡片时就在后台先把录音下载好；点的时候直接用。 */
+function recReady(key){const full=S.sel+"|"+key,info=recInfo(key);if(!info)return null;return REC.local[full]?.blob||REC.blobs[info.id]||null}
+function recLoad(id){
+  if(REC.blobs[id])return Promise.resolve(REC.blobs[id]);
+  if(!REC.loading[id])REC.loading[id]=Promise.race([
+    (async()=>{const u=await gh.audio(id);const b=await (await fetch(u)).blob();REC.blobs[id]=new Blob([b],{type:"audio/mp4"});return REC.blobs[id]})(),
+    new Promise((_,no)=>setTimeout(()=>no("timeout"),90000))
+  ]).finally(()=>{delete REC.loading[id]});
+  return REC.loading[id]}
+async function recBlob(key){const r=recReady(key);if(r)return r;const info=recInfo(key);return info?recLoad(info.id):null}
+async function recPrefetch(){
+  const id=S.sel,c=S.cards[id];const rec=c?.marks?.rec||{};
+  for(const k of Object.keys(rec)){if(S.sel!==id)return;const i=rec[k];if(!i?.id||REC.blobs[i.id])continue;
+    try{await recLoad(i.id)}catch(e){}if(S.sel===id)paintRecs()}
 }
 function recFile(blob,key,label){const c=S.cards[S.sel];const ext=/mp4|m4a|aac/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
-  const nm=((c?.card?.title||"伴读")+"-"+(S.profile?.name||"问问")+"-"+label).replace(/[\\/:*?"<>|\s]+/g,"");return new File([blob],nm+"."+ext,{type:blob.type||"audio/mp4"})}
+  const nm=((c?.card?.title||"伴读")+"-"+(S.profile?.name||"问问")+"-"+label).replace(/[\\/:*?"<>|\s]+/g,"");return new File([blob],nm+"."+ext,{type:ext==="m4a"?"audio/mp4":(blob.type||"audio/mp4").split(";")[0]})}
 async function shareFiles(files,title){
   try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title});return}}catch(e){if(e?.name==="AbortError")return}
   for(const f of files){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
@@ -950,12 +960,19 @@ async function recAction(t){
   if(act==="play"){
     if(!REC.player){REC.player=new Audio();REC.player.onended=REC.player.onpause=()=>{REC.playing=null;paintRecs()}}
     if(REC.playing===full){REC.player.pause();return}
-    try{t.disabled=true;const b=await recBlob(key);t.disabled=false;if(!b)return;REC.player.pause();if(REC.player.src)URL.revokeObjectURL(REC.player.src);REC.player.src=URL.createObjectURL(b);REC.playing=full;paintRecs();await REC.player.play()}catch(e){t.disabled=false;REC.playing=null;paintRecs();toast("这段录音没打开，检查一下网络")}
+    const b=recReady(key);
+    if(!b){toast("录音还在下载，好了再点一次");try{await recBlob(key);paintRecs();toast("录音好了，再点一次“听一听”")}catch(e){paintRecs();toast("这段录音没下载下来，检查一下网络")}return}
+    REC.player.pause();if(REC.player.src)URL.revokeObjectURL(REC.player.src);REC.player.src=URL.createObjectURL(b);REC.playing=full;paintRecs();
+    REC.player.play().catch(e=>{REC.playing=null;paintRecs();toast("没放出来，再点一次试试")});
     return}
-  if(act==="share"){const el=t.closest(".rec");try{const b=await recBlob(key);if(b)await shareFiles([recFile(b,key,el.dataset.label)],S.cards[S.sel]?.card?.title||"问问伴读")}catch(e){toast("录音没打开，检查一下网络")}return}
-  if(act==="shareall"){t.disabled=true;const files=[];
-    for(const el of document.querySelectorAll("#main .rec[data-rec]")){if(!recInfo(el.dataset.rec))continue;try{const b=await recBlob(el.dataset.rec);if(b)files.push(recFile(b,el.dataset.rec,el.dataset.label))}catch(e){}}
-    t.disabled=false;if(files.length)await shareFiles(files,(S.cards[S.sel]?.card?.title||"问问伴读")+" · "+(S.profile?.name||"问问")+"的录音");else toast("录音没打开，检查一下网络");return}
+  if(act==="share"){const el=t.closest(".rec");const b=recReady(key);
+    if(!b){toast("录音还在下载，好了再点一次");try{await recBlob(key);paintRecs();toast("录音好了，再点一次“分享”")}catch(e){toast("这段录音没下载下来，检查一下网络")}return}
+    shareFiles([recFile(b,key,el.dataset.label)],S.cards[S.sel]?.card?.title||"问问伴读");return}
+  if(act==="shareall"){const els=[...document.querySelectorAll("#main .rec[data-rec]")].filter(el=>recInfo(el.dataset.rec));
+    const miss=els.filter(el=>!recReady(el.dataset.rec));
+    if(miss.length){t.disabled=true;toast("录音还在下载，好了再点一次");await Promise.allSettled(miss.map(el=>recBlob(el.dataset.rec)));t.disabled=false;paintRecs();
+      toast(els.every(el=>recReady(el.dataset.rec))?"录音都好了，再点一次分享":"有的录音没下载下来，检查一下网络");return}
+    shareFiles(els.map(el=>recFile(recReady(el.dataset.rec),el.dataset.rec,el.dataset.label)),(S.cards[S.sel]?.card?.title||"问问伴读")+" · "+(S.profile?.name||"问问")+"的录音");return}
 }
 
 /* 右侧快速导航 */
@@ -1142,7 +1159,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="9f156f53d4";
+const BUILD="0e70b163ac";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
