@@ -46,6 +46,8 @@ b,strong{font-weight:600}
 .wrap>.main{order:0;width:100%;max-width:860px;margin:0 auto}
 .side{order:2;display:flex;flex-direction:column;gap:4px}
 .side-h{display:flex;align-items:center;justify-content:space-between;padding:0 12px 8px}
+.recstat{margin:0 12px 8px;padding:6px 10px;border-radius:8px;background:var(--soft,rgba(0,0,0,.04));font-size:13px;color:var(--muted)}
+.recstat:empty{display:none}
 .side-h span{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.08em}
 .addbtn{border:0;background:none;color:var(--blue);font-size:15px;font-weight:600;padding:4px 0}
 .list{display:flex;flex-direction:column;gap:2px}
@@ -324,6 +326,7 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
   <section id="v-cards" class="cards">
     <aside class="side">
       <div class="side-h"><span>往期伴读卡</span><button class="addbtn" id="newBtn">＋ 新的一篇</button></div>
+      <div class="recstat" id="recStat"></div>
       <div class="list" id="list"></div>
     </aside>
     <div class="main" id="main"><p class="muted">正在打开记录本…</p></div>
@@ -905,6 +908,7 @@ function recReady(key){const full=S.sel+"|"+key,info=recInfo(key);if(!info)retur
 const AUD_DB={db:null,
   open(){if(!this.db)this.db=new Promise((ok,no)=>{try{const r=indexedDB.open("wwbd-audio",1);r.onupgradeneeded=()=>r.result.createObjectStore("a");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});return this.db},
   async get(id){try{const db=await this.open();return await new Promise(ok=>{const q=db.transaction("a").objectStore("a").get(id);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch(e){return null}},
+  async keys(){try{const db=await this.open();return await new Promise(ok=>{const q=db.transaction("a").objectStore("a").getAllKeys();q.onsuccess=()=>ok(q.result||[]);q.onerror=()=>ok([])})}catch(e){return[]}},
   async put(id,blob){try{const ab=await blob.arrayBuffer();const db=await this.open();db.transaction("a","readwrite").objectStore("a").put({ab,type:blob.type},id)}catch(e){}}};
 const SILENT="data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
 function dataToBlob(s){const i=s.indexOf(","),head=s.slice(0,i);const bin=atob(s.slice(i+1).replace(/\s/g,""));const u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
@@ -926,12 +930,22 @@ function recLoad(id,dur){
     const b=dataToBlob(txt);REC.blobs[id]=b;AUD_DB.put(id,b);return b})().finally(()=>{delete REC.loading[id];delete REC.prog[id]});
   return REC.loading[id]}
 async function recBlob(key){const r=recReady(key);if(r)return r;const info=recInfo(key);return info?recLoad(info.id,info.dur):null}
+/* 打开网页就在后台把所有录音存进本机：正在看的那篇先存，再从短到长；侧栏显示存了多少段 */
+const RALL={have:null,fail:new Set(),busy:false};
+function recAllList(){const m=new Map();for(const[cid,c]of Object.entries(S.cards))for(const i of Object.values(c?.marks?.rec||{}))if(i?.id&&!m.has(i.id))m.set(i.id,{id:i.id,dur:i.dur||0,cid});return[...m.values()]}
+function recStatPaint(){const el=$("#recStat");if(!el||!RALL.have)return;const all=recAllList();if(!all.length){el.textContent="";return}
+  const n=all.filter(i=>RALL.have.has(i.id)).length,f=all.filter(i=>!RALL.have.has(i.id)&&RALL.fail.has(i.id)).length;
+  el.textContent=n===all.length?`✓ 录音已存到本机 ${n}/${all.length}，点了就能听`:RALL.busy?`正在把录音存到本机 ${n}/${all.length}…`:f?`录音已存到本机 ${n}/${all.length}，有 ${f} 段没存下来，网好了会再试`:`录音已存到本机 ${n}/${all.length}`}
 async function recPrefetch(){
-  const id=S.sel,c=S.cards[id];const rec=c?.marks?.rec||{};
-  const q=Object.values(rec).filter(i=>i?.id&&!REC.blobs[i.id]).sort((a,b)=>(a.dur||0)-(b.dur||0));
-  const run=async()=>{while(q.length){if(S.sel!==id)return;const i=q.shift();try{await recLoad(i.id,i.dur)}catch(e){}}};
-  await Promise.all([run(),run()])
+  if(!RALL.have){RALL.have=new Set(await AUD_DB.keys());for(const k in REC.blobs)RALL.have.add(k)}
+  recStatPaint();if(RALL.busy)return;RALL.busy=true;
+  const next=()=>{const q=recAllList().filter(i=>!RALL.have.has(i.id)&&!RALL.fail.has(i.id)&&!REC.loading[i.id]);if(!q.length)return null;
+    q.sort((a,b)=>((b.cid===S.sel)-(a.cid===S.sel))||a.dur-b.dur);return q[0]};
+  const run=async()=>{for(let i;(i=next());){try{await recLoad(i.id,i.dur);RALL.have.add(i.id)}catch(e){RALL.fail.add(i.id)}recStatPaint()}};
+  try{await Promise.all([run(),run()])}finally{RALL.busy=false;recStatPaint()}
 }
+window.addEventListener("online",()=>{RALL.fail.clear();recPrefetch()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&RALL.fail.size){RALL.fail.clear();recPrefetch()}});
 function recFile(blob,key,label){const c=S.cards[S.sel];const ext=/mp4|m4a|aac/.test(blob.type)?"m4a":/ogg/.test(blob.type)?"ogg":"webm";
   const nm=((c?.card?.title||"伴读")+"-"+(S.profile?.name||"问问")+"-"+label).replace(/[\\/:*?"<>|\s]+/g,"");return new File([blob],nm+"."+ext,{type:ext==="m4a"?"audio/mp4":(blob.type||"audio/mp4").split(";")[0]})}
 async function shareFiles(files,title){
@@ -961,7 +975,7 @@ async function recSave(cardId,key,blob,dur){
   REC.saving[full]=1;paintRecs();
   try{
     if(!cap.assets)throw "nokey";
-    const gid=await gh.uploadAudio(blob);REC.blobs[gid]=blob;AUD_DB.put(gid,blob);delete REC.local[full];
+    const gid=await gh.uploadAudio(blob);REC.blobs[gid]=blob;AUD_DB.put(gid,blob);RALL.have?.add(gid);delete REC.local[full];
     const info={id:gid,dur:Math.round(dur),type:blob.type,at:Date.now()};
     const c=S.cards[cardId];if(c)c.marks=deepMerge(c.marks||{},{rec:{[key]:info}});
     await updCard(cardId,{marks:{rec:{[key]:info}}});
@@ -1181,7 +1195,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="e8b1541d5e";
+const BUILD="4323e0644f";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
@@ -1190,8 +1204,8 @@ new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true
   const pull=()=>{const wasWait=S.sel&&S.cards[S.sel]?.status==="uploaded"&&!S.cards[S.sel]?.card;
     const m={...DB.data.cards};for(const id in S.live)if(!m[id]&&S.cards[id])m[id]=S.cards[id];S.cards=m;S.profile=DB.data.settings.profile||null;
     if(wasWait&&S.cards[S.sel]?.card)toast("新伴读卡写好啦！")};
-  pull();firstView();
-  DB.subs.push(()=>{pull();if(S.loaded)onCardsChanged(null);if(S.tab==="set"&&document.activeElement?.closest?.("#v-set")==null)renderSet()});
+  pull();firstView();recPrefetch();
+  DB.subs.push(()=>{pull();recPrefetch();if(S.loaded)onCardsChanged(null);if(S.tab==="set"&&document.activeElement?.closest?.("#v-set")==null)renderSet()});
   DB.start();
 })();
 </script>
