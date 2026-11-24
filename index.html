@@ -227,6 +227,7 @@ details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--b
 .yw rt{font-family:var(--sans);font-size:12px;color:var(--muted);letter-spacing:0;font-weight:400}
 .yw mark{background:none;color:inherit;border-bottom:3px solid var(--grid);cursor:pointer;border-radius:2px}
 .yw mark:hover,.yw mark.on{background:var(--green-pale)}
+.yw mark+mark{margin-left:4px}
 @media (max-width:640px){.yw .para{font-size:23px}}
 .hwtip{position:absolute;z-index:50;max-width:min(320px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(27,36,53,.14);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
 .hwtip .w{font-family:var(--kai);font-size:24px;line-height:1.2}
@@ -669,6 +670,7 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 6. 家长小贴士写给家长看，最多 2 条：怎么引导，碰到死亡、打仗、吃人、可怕的样子这类内容怎么温和地说，不回避也不渲染。
 6a. 原文 text：照片里的正文一字不差地抄下来，分段必须和书上的自然段完全一致，不能自己新分段；每段里再切成适合跟读的短句。每句写成 {"t":"句子","py":"拼音"}，py 一个汉字一个音节、空格隔开、带声调，照书上印的拼音抄。家长会对着它读给孩子跟读。书上有古文「原文」和「译文」的，也要抄进 text，按书上的顺序放在前面：段的开头放一个 {"label":"原文"}（或 "译文"、"故事"）当小标题；出处那一行（如 ——《海外北经》）单独一段，写成 {"t":"——《海外北经》","py":"hǎi wài běi jīng","align":"right"}。
 7a. 难词 hardWords：挑原文里对一年级最难、最要紧的词（和古文词加起来最多 9 个），一句话解释并联系他的爱好或生活；how 从「读前先讲」（最多 2 个，不懂就读不明白的）「先让他猜」「读到时一句话」里选。原文、译文里的古文词（如 其、为人深目、一目、出处的篇名）也要放进 hardWords，how 写「古文」，用孩子能听懂的话解释（难词不再单独列一组，只在“一起读”的原文里画线，点开看解释）。每个古文词再加一个 fun 字段：能马上玩起来、有趣的讲法（古今对比、数字数、猜谜、联系他喜欢的三国/恐龙/龙珠）。有古文时再加一个 guwen 字段 {"say":"家长开场白","games":[{"name":"小游戏","how":"怎么玩","examples":["例子"]}]}，2–3 个古今对比小游戏，引用的古文必须真实准确。
+7c. 有古文原文时，再加 guwenZi：把古文原文里孩子大概率会问“这是什么意思”的字词都列出来（虚词如 其、之、者、曰、为，和古今意思不一样的字，如 羽＝羽毛、颊＝脸蛋），已经写进 hardWords 的不用重复。每个写 {"word":"其","pinyin":"qí","meaning":"给 6 岁孩子听的一句话解释，结合这句古文说它在这里是什么意思","fun":"可以为空：一句好玩的讲法"}。网页上只在原文里给这些字画线，点一下出解释。没有古文就返回空数组。
 7b. 网页上不再显示“学句子、用词说句子、聊一句”：figures、makeSentences 返回空数组；精读时 chat 返回空字符串（泛读还要写 chat）。
 7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
 8. 玩法：标准＝正常；画一画日＝小任务改成把今天的神兽或人物画下来，题目更轻松；小考官日＝在 examinerQuestions 里给 2–3 道让孩子考爸爸妈妈的题，附答案。其他玩法 examinerQuestions 返回空数组。
@@ -697,6 +699,7 @@ ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
  "hardWords": [{"word": "悬崖", "pinyin": "xuán yá", "how": "读前先讲", "meaning": "一句话解释", "link": "联系他的爱好或生活"}],
  "figures": [{"kind": "比喻/拟人/想象", "sentence": "原文句子", "explain": "好在哪", "guide": ["步骤"], "example": "家长示范句"}],
  "makeSentences": [{"word": "比较", "guide": ["步骤"], "example": "参考句子"}],
+ "guwenZi": [{"word": "其", "pinyin": "qí", "meaning": "在这句古文里的意思", "fun": ""}],
  "recap": {"say": "开场一句", "steps": [{"ask": "家长问的原话", "answer": "孩子多半会说", "help": "答不上来时家长说"}], "close": "最后家长帮他连起来说的话"},
  "lessons": [{"point": "一句话的道理", "talk": [{"who": "你", "say": "家长说的话"}, {"who": "问问", "say": "孩子多半会说"}]}]
 }`;
@@ -837,14 +840,17 @@ function renderCard(id){
   const HOWN={"古文":-1,"读前先讲":0,"先让他猜":1,"读到时一句话":2};
   const hw=k.hardWords.filter(x=>x?.word).map((h,i)=>[h,i]).sort((a,b)=>((HOWN[a[0].how]??3)-(HOWN[b[0].how]??3))||a[1]-b[1]).map(x=>x[0]);
   const hwList=hw.flatMap(h=>String(h.word).split(/[、，,]/)).map(w=>w.trim()).filter(Boolean).sort((a,b)=>b.length-a.length);
-  S.hwCur=hw;document.getElementById("hwTip")?.remove();tipFor=null;
-  const hwIdx=w=>hw.findIndex(h=>String(h.word).split(/[、，,]/).map(x=>x.trim()).includes(w));
-  const lineHTML=item=>{
+  const hwHas=w=>hw.some(h=>String(h.word).split(/[、，,]/).map(x=>x.trim()).includes(w));
+  const gz=arr(k.guwenZi).filter(x=>x?.word&&!hwHas(String(x.word).trim()));
+  S.hwCur=hw.concat(gz);document.getElementById("hwTip")?.remove();tipFor=null;
+  const gzList=gz.map(g=>String(g.word).trim()).filter(Boolean);
+  const hwIdx=w=>{const i=hw.findIndex(h=>String(h.word).split(/[、，,]/).map(x=>x.trim()).includes(w));return i>=0?i:hw.length+gz.findIndex(g=>String(g.word).trim()===w)};
+  const lineHTML=(item,inYW)=>{const LIST=inYW&&gzList.length?hwList.concat(gzList).sort((a,b)=>b.length-a.length):hwList;
     const t=typeof item==="string"?item:String(item?.t||"");const chars=[...t];
     const syl=typeof item==="object"&&item?.py?String(item.py).trim().split(/\s+/):[];
     const isHan=ch=>/\p{Script=Han}/u.test(ch);const nHan=chars.filter(isHan).length;const usePy=syl.length===nHan;
     const tag=new Array(chars.length).fill(-1);
-    for(const w of hwList){const wc=[...w];for(let i=0;i+wc.length<=chars.length;i++){if(wc.every((c,j)=>chars[i+j]===c)&&tag.slice(i,i+wc.length).every(x=>x<0)){for(let j=0;j<wc.length;j++)tag[i+j]=hwIdx(w)*1000+i}}}
+    for(const w of LIST){const wc=[...w];for(let i=0;i+wc.length<=chars.length;i++){if(wc.every((c,j)=>chars[i+j]===c)&&tag.slice(i,i+wc.length).every(x=>x<0)){for(let j=0;j<wc.length;j++)tag[i+j]=hwIdx(w)*1000+i}}}
     let out="",k2=0,open=-1;
     chars.forEach((ch,i)=>{
       if(tag[i]!==open){if(open>=0)out+="</mark>";if(tag[i]>=0)out+=`<mark data-hw="${Math.floor(tag[i]/1000)}" tabindex="0" role="button">`;open=tag[i]}
@@ -853,7 +859,7 @@ function renderCard(id){
   const paras=arr(k.text).map(p=>Array.isArray(p)?p:[p]).filter(p=>p.length);
   const G=k.guwen;
   if(G&&(G.say||arr(G.games).length))B.push(step("古文小课",`<div class="gwbox">${G.say?`<p class="gwt">先这样开个头</p><p class="say-line">“${esc(G.say)}”</p>`:""}${arr(G.games).map(g=>`<div class="gwg"><p class="gwn">${esc(g.name||"")}</p>${g.how?`<p class="sub">${esc(g.how)}</p>`:""}${arr(g.examples).length?`<ul class="gwex">${arr(g.examples).map(e=>`<li>${esc(e)}</li>`).join("")}</ul>`:""}</div>`).join("")}</div>`));
-  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${recHTML("read","一起读","录下一起读")}${paras.length?`<div class="yw">${paras.map(p0=>{const lab=p0.find(l=>l&&typeof l==="object"&&l.label&&!l.t);const p=p0.filter(l=>!(l&&typeof l==="object"&&l.label&&!l.t));const LC={"原文":"","译文":" yi","故事":" gs"};const head=lab?`<span class="ywlab${LC[lab.label]??" gs"}">${esc(lab.label)}</span>`:"";if(!p.length)return head;const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");const right=p.some(l=>l&&l.align==="right");return head+`<p class="para${right?" src":/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l)}</span>`).join("")}</p>`}).join("")}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
+  B.push(step("一起读",`<p class="muted">你对着这里读一句，问问看着书跟读一句。画了线的是难词，点一下就能看解释。</p>${recHTML("read","一起读","录下一起读")}${paras.length?`<div class="yw">${(()=>{let SEC="";return paras.map(p0=>{const lab=p0.find(l=>l&&typeof l==="object"&&l.label&&!l.t);if(lab)SEC=lab.label;const p=p0.filter(l=>!(l&&typeof l==="object"&&l.label&&!l.t));const LC={"原文":"","译文":" yi","故事":" gs"};const head=lab?`<span class="ywlab${LC[lab.label]??" gs"}">${esc(lab.label)}</span>`:"";if(!p.length)return head;const first=typeof p[0]==="string"?p[0]:String(p[0]?.t||"");const right=p.some(l=>l&&l.align==="right");return head+`<p class="para${right?" src":/^(……|…|\.\.\.)/.test(first)?" cont":""}">${p.map(l=>`<span class="ln">${lineHTML(l,SEC==="原文"&&!right)}</span>`).join("")}</p>`}).join("")})()}</div>`:""}${k.review.length?`<div><p class="muted">读到这些学过的字时停一下：</p><ul class="plain">${k.review.map(r=>`<li><b>${esc(r.word)}</b>　${esc(r.note)}</li>`).join("")}</ul></div>`:""}`));
 
   if(k.words.length)B.push(step("认字词",`<div class="list-rows">${k.words.map(w=>{const st=m.words?.[w.word]||"";return`<div class="wd">
       <div class="zi${[...(w.word||"")].length>2?" long":""}"><span class="py">${esc(w.pinyin)}</span><span class="tzs">${[...(w.word||"")].map(ch=>`<b class="tz">${esc(ch)}</b>`).join("")}</span></div>
@@ -1211,7 +1217,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="d5530bfe17";
+const BUILD="44444cbc08";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
