@@ -178,6 +178,15 @@ details.ans[open]{display:block}
 details.ans[open] summary::after{content:" ⌄"}
 details.ans .a{margin-top:6px;font-size:16px;color:var(--ink);background:var(--blue-pale);border-radius:10px;padding:10px 14px}
 .qq{display:flex;flex-direction:column;gap:8px}
+.dlg{display:flex;flex-direction:column;gap:10px}
+.dlg .ln2{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:2px 12px;align-items:baseline}
+.dlg .who{font-size:14px;color:var(--muted);font-weight:600}
+.dlg .me{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1.6;color:var(--ink)}
+.dlg .he{font-size:17px;line-height:1.6;color:var(--ink)}
+.dlg .help{font-size:15px;line-height:1.6;color:var(--muted)}
+.dlg .pt{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);padding-top:6px}
+.dlg .num{font-size:13px;color:var(--muted);font-weight:600;padding-top:8px;border-top:1px solid var(--line,#e5e0d8)}
+.dlg .num:first-child{border-top:0;padding-top:0}
 .qq .k{font-size:13px;color:var(--muted);font-weight:600}
 .qq .qt{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1.6}
 .qq .row{gap:8px;margin-top:4px}
@@ -664,6 +673,7 @@ ${pw.ws.length?pw.ws.join("、"):"还没有"}
 7. 复现：今天原文里如果出现了“以前学过的字词”里的字词，或者卡壳过的字，写进 review，告诉家长读到时怎么提醒。
 8. 玩法：标准＝正常；画一画日＝小任务改成把今天的神兽或人物画下来，题目更轻松；小考官日＝在 examinerQuestions 里给 2–3 道让孩子考爸爸妈妈的题，附答案。其他玩法 examinerQuestions 返回空数组。
 9. 原文里出现神兽、怪物，就写进 beasts（每只一项）；出现三国或历史人物，就写进 people。没有就返回空数组。
+9a. ${fan?"泛读日 recap 返回 null，lessons 返回空数组。":"过程回顾 recap 和讲的道理 lessons：家长会照着念，所以写成“你说的原话”和“问问多半会怎么答”。recap 按故事顺序 4–6 步，用“因为……所以……”把前因后果串起来，每步一个问题（ask，家长原话）、孩子多半会说的答案（answer，短）、答不上来时家长说的提示（help）；close 是最后家长帮他把整件事连起来说的一两句话。lessons 挑 1–2 个这篇故事里真有的道理，每个写 point（一句话的道理，给家长看）和 talk（3–5 句来回的对话，who 为“你”或“问问”）：先问他自己的看法，联系他的生活或他喜欢的东西，让他自己说出道理，不要家长一口气讲完。故事里有冒险、受伤、打仗这类情节时，提醒一句“遇到危险先告诉大人”。没有情节的纯介绍，recap 写 3–4 步也行，lessons 可以返回空数组。"}
 ${fan?"10. 今天是泛读：重点是读得开心。words、questions 都返回空数组，给一个读完随便聊的问题 chat，加上人物卡 people。":""}
 ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
 【只回复一个 JSON 对象，字段如下】
@@ -686,7 +696,9 @@ ${extra?"\n【家长这次的补充要求】\n"+extra+"\n":""}
  "examinerQuestions": [{"q": "", "answer": ""}],
  "hardWords": [{"word": "悬崖", "pinyin": "xuán yá", "how": "读前先讲", "meaning": "一句话解释", "link": "联系他的爱好或生活"}],
  "figures": [{"kind": "比喻/拟人/想象", "sentence": "原文句子", "explain": "好在哪", "guide": ["步骤"], "example": "家长示范句"}],
- "makeSentences": [{"word": "比较", "guide": ["步骤"], "example": "参考句子"}]
+ "makeSentences": [{"word": "比较", "guide": ["步骤"], "example": "参考句子"}],
+ "recap": {"say": "开场一句", "steps": [{"ask": "家长问的原话", "answer": "孩子多半会说", "help": "答不上来时家长说"}], "close": "最后家长帮他连起来说的话"},
+ "lessons": [{"point": "一句话的道理", "talk": [{"who": "你", "say": "家长说的话"}, {"who": "问问", "say": "孩子多半会说"}]}]
 }`;
 }
 function clean(card){
@@ -695,7 +707,7 @@ function clean(card){
   card.retell=card.retell&&typeof card.retell==="object"?card.retell:{type:"",items:[]};card.retell.items=arr(card.retell.items);
   card.warmup=card.warmup&&typeof card.warmup==="object"?card.warmup:null;
   card.task=card.task&&typeof card.task==="object"?card.task:null;
-  card.guwen=card.guwen&&typeof card.guwen==="object"?card.guwen:null;if(card.guwen)card.guwen.games=arr(card.guwen.games);
+  card.guwen=card.guwen&&typeof card.guwen==="object"?card.guwen:null;card.recap=card.recap&&typeof card.recap==="object"?card.recap:null;if(card.recap)card.recap.steps=arr(card.recap.steps).filter(x=>x&&x.ask);card.lessons=arr(card.lessons).filter(x=>x&&(x.point||arr(x.talk).length));if(card.guwen)card.guwen.games=arr(card.guwen.games);
   return card;
 }
 const ERR={bad_key:"AI 钥匙不对或失效了，去「设置」里重新粘贴。",no_credit:"AI 账户的余额用完了，充值后再试。",overloaded:"AI 现在太忙，过一两分钟点“再试一次”。",network:"没连上网，连上后点“再试一次”。",api:"AI 那边出了点问题，点“再试一次”。",rate_limited:"用得太频繁了，过一会儿再试。",image_rejected:"有照片读不了，换一张清楚的再试。",refused:"AI 没法处理这些照片，换一下照片再试。",invalid_json:"AI 写出来的格式不对，点“再试一次”。",empty_completion:"AI 没写出内容，点“再试一次”。",prompt_too_large:"内容太多了，少放几张照片再试。"};
@@ -855,6 +867,11 @@ function renderCard(id){
   if(k.questions.length)B.push(step(k.questions.length===2?"两道题":"问一问",`<div class="list-rows">${k.questions.map((q,i)=>{const st=m.q?.["q"+i]||"";return`<div class="qq"><span class="k">${esc(q.type||"")}</span><p class="qt">${esc(q.q)}</p><div>${ans("提示",q.hint)}${ans("参考答案",q.answer)}</div>
       <div class="row" style="gap:6px"><button class="mk ok" data-qm="q${i}" data-v="yes" aria-pressed="${st==="yes"}">自己答出</button><button class="mk mid" data-qm="q${i}" data-v="hint" aria-pressed="${st==="hint"}">提示后答出</button><button class="mk no" data-qm="q${i}" data-v="no" aria-pressed="${st==="no"}">还不会</button></div>${recHTML("q"+i,"第"+(i+1)+"题·"+(q.type||""))}</div>`}).join("")}</div>`));
 
+  const RC=k.recap&&k.recap.steps?.length?k.recap:null,LS=arr(k.lessons).filter(x=>x&&(x.point||arr(x.talk).length));
+  if(RC||LS.length)B.push(`<div class="phase"><h3>还有劲儿，再聊一聊</h3><p>照着念就行。他说得不一样也没关系，先接住他的话，再帮他说完整。</p></div>`);
+  const L2=(who,cls,t)=>t?`<div class="ln2"><span class="who">${who}</span><p class="${cls}">${esc(t)}</p></div>`:"";
+  if(RC)B.push(step("过程回顾",`<p class="muted">你问一句，等他说。他答不上来，就念「提示」那句。</p><div class="dlg">${RC.say?L2("你","me","“"+RC.say+"”"):""}${RC.steps.map((x,i)=>`<p class="num">第 ${i+1} 步</p>${L2("你","me","“"+x.ask+"”")}${L2("问问","he",x.answer)}${L2("提示","help",x.help)}`).join("")}${RC.close?`<p class="num">最后</p>${L2("你","me","“"+RC.close+"”")}`:""}</div>${recHTML("recap","过程回顾","录下问问的回顾")}`));
+  if(LS.length)B.push(step("讲的道理",`<p class="muted">别一口气讲完，挑一个就够。用问的，让他自己说出来。</p><div class="dlg">${LS.map(l=>`${l.point?`<p class="pt">${esc(l.point)}</p>`:""}${arr(l.talk).map(t=>{const me=t.who!=="问问";return L2(me?"你":"问问",me?"me":"he",me?"“"+(t.say||"")+"”":t.say)}).join("")}`).join("")}</div>`));
   if(k.chat&&c.mode==="泛读")B.push(step("读完聊一句",`<p class="say-line">“${esc(k.chat)}”</p>${recHTML("chat","聊一句")}`));
   const ex=k.examinerQuestions.filter(x=>x.q);
   if(ex.length)B.push(step("小考官时间",`<p class="muted">让问问来考你，可以故意答错让他纠正。</p><div class="list-rows">${ex.map(x=>`<div><p class="pr">${esc(x.q)}</p>${ans("看答案",x.answer)}</div>`).join("")}</div>${recHTML("exam","小考官")}`));
@@ -1195,7 +1212,7 @@ function firstView(){
 
 /* ---------------- 启动 ---------------- */
 /* iPad 主屏幕会缓存旧页面：每次打开都问一下网上有没有新版本，有就换上 */
-const BUILD="4323e0644f";
+const BUILD="04ed689ca5";
 if(location.protocol.startsWith("http")){const chk=()=>fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD="(\w+)"/);if(m&&m[1]!==BUILD&&!Object.keys(S.live).length)location.replace(location.pathname+"?v="+m[1])}).catch(()=>{});
   chk();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chk()})}
 new MutationObserver(hydrate).observe(document.body,{childList:true,subtree:true});
